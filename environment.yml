@@ -1,0 +1,9 @@
+name: sequencer-automation 
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - python=3.6
+  - airflow=1.10.0
+  - ipython
+  - paramiko
