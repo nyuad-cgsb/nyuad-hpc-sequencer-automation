@@ -17,6 +17,9 @@ import {RunBiosailsWorkflowRouteComponent} from './run-biosails-workflow-route/r
  */
 import {TypeaheadModule} from 'ngx-bootstrap/typeahead';
 import {UiSwitchModule} from 'ngx-ui-switch';
+import {NotFoundComponent} from './pages/not-found/not-found.component';
+import {AirflowService} from './airflow/airflow.service';
+import {HttpClient, HttpClientModule, HttpHandler} from '@angular/common/http';
 
 /**
  * Routes
@@ -24,6 +27,8 @@ import {UiSwitchModule} from 'ngx-ui-switch';
 const appRoutes: Routes = [
   {path: 'run-biosails-workflow', component: RunBiosailsWorkflowRouteComponent},
   {path: 'demultiplex', component: DemultiplexRouteComponent},
+  // {path: '404', component: NotFoundComponent},
+  // {path: '**', redirectTo: '/404'}
 ];
 
 @NgModule({
@@ -32,9 +37,11 @@ const appRoutes: Routes = [
     DemultiplexComponent,
     DemultiplexRouteComponent,
     RunBiosailsWorkflowComponent,
-    RunBiosailsWorkflowRouteComponent
+    RunBiosailsWorkflowRouteComponent,
+    NotFoundComponent
   ],
   imports: [
+    HttpClientModule,
     FormsModule,
     BrowserModule,
     UiSwitchModule.forRoot({}),

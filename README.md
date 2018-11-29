@@ -11,7 +11,9 @@ This is the beginning of a pipeline to use airflow https://airflow.apache.org/st
 
 Bootstrap an environment with the environment.yml of the repo.
 
-`conda env create -f environment.yml -p $HOME/software/airflow`
+```
+conda env create -f environment.yml -p $HOME/software/airflow
+```
 
 This only installs the default packages, which are not suitable for a production environment. More information on starting a production environment coming soon.
 
@@ -31,11 +33,22 @@ airflow scheduler
 airflow webserver
 ```
 
-
 If you haven't unset the load_examples from airflow.cfg, you might get some errors about kubernetes. Don't worry about these, or just set load_examples as False in the config.
 
 ~/airflow/airflow.cfg (or $AIRFLOW_HOME/airflow.cfg)
+
 ```
 #load_examples = True
 load_examples = False
 ```
+
+## Dags and Plugins
+
+In order to get airflow to see the dags and plugins here you need to modify the airflow.cfg, which is in ${AIRLFOW_HOME}/airflow.cfg. Default is ~/airflow/airflow.cfg
+
+```
+dags_folder = /home/airflow/airflow/dags
+plugins_folder = /home/airflow/airflow/plugins
+```
+
+To $(pwd)/plugins and $(pwd)/dags

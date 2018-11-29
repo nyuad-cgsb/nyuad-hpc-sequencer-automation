@@ -4,9 +4,11 @@ https://github.com/apache/incubator-airflow/blob/master/airflow/example_dags/tut
 """
 from airflow import DAG
 from airflow.operators.bash_operator import BashOperator
+from airflow.operators.python_operator import PythonOperator
 from datetime import datetime, timedelta
 import requests
 import json
+from pprint import pprint
 
 default_args = {
     'owner': 'airflow',
@@ -51,6 +53,21 @@ t3 = BashOperator(
     params={'my_param': 'Parameter I passed in'},
     dag=dag)
 
+
+def print_context(ds, **kwargs):
+    pprint(kwargs)
+    pprint(kwargs['dag_run'].conf)
+    print(ds)
+    return 'Whatever you return gets printed in the logs'
+
+
+run_this = PythonOperator(
+    task_id='print_the_context',
+    provide_context=True,
+    python_callable=print_context,
+    dag=dag)
+
+t1.set_upstream(run_this)
 t2.set_upstream(t1)
 t3.set_upstream(t1)
 

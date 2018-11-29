@@ -1,0 +1,2 @@
+cd /work/gencore/novaseq && \n
+tar -cvf 180710_A00534_0022_AHFY3KDMXX.tar.gz 

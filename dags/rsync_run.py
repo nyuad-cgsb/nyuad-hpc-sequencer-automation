@@ -11,47 +11,60 @@ import os
 
 Description: This is a workflow that goes from demultiplexing runs on /work, rsyncing them to /scratch, 
     tars the raw run along with the demultiplexed fastqs, runs an md5sum check, and archives the whole lot of it 
+    
+Example Conf Parameters:
+        'work_dir': '/work/gencore/novaseq/180710_A00534_0022_AHFY3KDMXX'
+        'scratch_dir': '/scratch/gencore/novaseq/180710_A00534_0022_AHFY3KDMXX'
+        'bcl2fastq': '/scratch/gencore/bcl2fastq-v2.20.0.422/bin/bcl2fastq'
 
 copy_ssh_helpers_script_task
-    operator: SFTPOperator
     description: Copies the ssh_helpers.py script to the run folder (so there is always a current record in case it changes) 
+    host: dalma.abudhabi.nyu.edu
+    operator: SFTPOperator
     dependencies: none 
     
 Demultiplex Tasks
 
 copy_demultiplex_script_task
-    operator: SFTPOperator
     description: Copies the run_bcl2fastq.py script to the run folder (so there is always a current record in case it changes) 
+    host: dalma.abudhabi.nyu.edu
+    operator: SFTPOperator
     dependencies: copy_ssh_helpers_script_task 
 
 demultiplex_task
-    operator: SSHOperator
     description: Runs the previously copied run_bcl2fastq script (from the run folder) and runs it. This uses bcl2fastq to demultiplex the run
+    host: compute-15
+    operator: SSHOperator
     dependencies: copy_demultiplex_script_task
     
 rsync_work_task
-    operator: SSHOperator
     description: Rsyncs the demultiplexed reads from $WORK to $SCRATCH
+    host: dalma.abudhabi.nyu.edu
+    operator: SSHOperator
     dependencies: demultiplex_task
     
 copy_tar_run_script_task
-    operator: SFTP
     description: Copies the tar_run_folder.py script to the run folder
+    host: dalma.abudhabi.nyu.edu
+    operator: SFTP
     dependencies: rsync_work_task
     
 tar_run_folder_task
+    description: Tars the run folder and runs an md5sum check
+    host: compute-15-1
     operator: SSHOperator
-    descriptions: Tars the run folder and runs an md5sum check
     dependencies: copy_tar_run_script_task
 
 copy_archive_run_script_task
-    operator: SFTPOperator
     description: Copies the archive_run_folder to the run dir
+    host: dalma.abudhabi.nyu.edu 
+    operator: SFTPOperator
     dependencies: tar_run_folder_task
 
 archive_run_folder_task
-    operator: SSHOperator
     description: Archives the tarred run
+    host: archive3 
+    operator: SSHOperator
     TODO: Figure out md5sum checks - I can run the md5sum, but then how to run it from archive?
     dependencies: copy_archive_run_script_task
 """
@@ -76,13 +89,8 @@ ssh_hook.no_host_key_check = True
 
 copy_ssh_helpers_script_task = SFTPOperator(
     task_id='sftp_put_ssh_helpers_script',
-    params={
-        'sequence_run_work': '/work/gencore/novaseq/180710_A00534_0022_AHFY3KDMXX',
-        'sequence_run_scratch': '/scratch/gencore/novaseq/180710_A00534_0022_AHFY3KDMXX',
-        'bcl2fastq': '/scratch/gencore/bcl2fastq-v2.20.0.422/bin/bcl2fastq',
-    },
     local_filepath=os.path.join('/Users/jillian/Dropbox/projects/infrastructure/nyuad-hpc-sequencer-automation', 'ssh_helpers.py'),
-    remote_filepath='{{params.sequence_run_work}}/ssh_helpers.py',
+    remote_filepath='{{ dag_run.conf["work_dir"] }}/ssh_helpers.py',
     operation='put',
     ssh_hook=ssh_hook,
     dag=dag,
@@ -90,13 +98,8 @@ copy_ssh_helpers_script_task = SFTPOperator(
 
 copy_demultiplex_script_task = SFTPOperator(
     task_id='sftp_put_demultiplex_script',
-    params={
-        'sequence_run_work': '/work/gencore/novaseq/180710_A00534_0022_AHFY3KDMXX',
-        'sequence_run_scratch': '/scratch/gencore/novaseq/180710_A00534_0022_AHFY3KDMXX',
-        'bcl2fastq': '/scratch/gencore/bcl2fastq-v2.20.0.422/bin/bcl2fastq',
-    },
     local_filepath=os.path.join('/Users/jillian/Dropbox/projects/infrastructure/nyuad-hpc-sequencer-automation', 'run_bcl2fastq.py'),
-    remote_filepath='{{params.sequence_run_work}}/run_bcl2fastq.py',
+    remote_filepath='{{ dag_run.conf["work_dir"] }}/run_bcl2fastq.py',
     operation='put',
     ssh_hook=ssh_hook,
     dag=dag,
@@ -105,8 +108,8 @@ copy_demultiplex_script_task = SFTPOperator(
 demultiplex_command = """
         module load gencore gencore_anaconda/3-4.0.0
         export PATH=/scratch/gencore/bcl2fastq-v2.20.0.422/bin/:$PATH
-        cd "{{ params.sequence_run_work }}"
-        python3 run_bcl2fastq.py --run-dir {{params.sequence_run_work}}
+        cd "{{ dag_run.conf["work_dir"] }}"
+        python3 run_bcl2fastq.py --run-dir {{ dag_run.conf["work_dir"] }}
 """
 
 demultiplex_task = SSHOperator(
@@ -115,17 +118,13 @@ demultiplex_task = SSHOperator(
     ssh_hook=ssh_hook,
     retries=1,
     do_xcom_push=True,
-    params={
-        'sequence_run_work': '/work/gencore/novaseq/180710_A00534_0022_AHFY3KDMXX',
-        'sequence_run_scratch': '/scratch/gencore/novaseq/180710_A00534_0022_AHFY3KDMXX',
-        'bcl2fastq': '/scratch/gencore/bcl2fastq-v2.20.0.422/bin/bcl2fastq',
-    },
     dag=dag)
 
 rsync_work_command = """
         echo "{{ ds }}"
-        mkdir -p {{params.sequence_run_scratch}}/Unaligned
-        rsync -av "{{ params.sequence_run_work }}/Unaligned" "{{params.sequence_run_scratch}}"
+        {{ dag_run.conf["work_dir"] if dag_run else "exit 256" }}
+        mkdir -p {{ dag_run.conf["scratch_dir"] }}
+        rsync -av "{{ dag_run.conf["work_dir"] }}/Unaligned" "{{ dag_run.conf["scratch_dir"] }}/"
 """
 rsync_work_task = SSHOperator(
     task_id='rsync_work_scratch',
@@ -134,23 +133,13 @@ rsync_work_task = SSHOperator(
     retries=5,
     retry_delay=10,
     do_xcom_push=True,
-    params={
-        'sequence_run_work': '/work/gencore/novaseq/180710_A00534_0022_AHFY3KDMXX',
-        'sequence_run_scratch': '/scratch/gencore/novaseq/180710_A00534_0022_AHFY3KDMXX',
-        'bcl2fastq': '/scratch/gencore/bcl2fastq-v2.20.0.422/bin/bcl2fastq',
-    },
     dag=dag
 )
 
 copy_tar_run_script_task = SFTPOperator(
     task_id='sftp_put_tar_run_script',
-    params={
-        'sequence_run_work': '/work/gencore/novaseq/180710_A00534_0022_AHFY3KDMXX',
-        'sequence_run_scratch': '/scratch/gencore/novaseq/180710_A00534_0022_AHFY3KDMXX',
-        'bcl2fastq': '/scratch/gencore/bcl2fastq-v2.20.0.422/bin/bcl2fastq',
-    },
     local_filepath=os.path.join('/Users/jillian/Dropbox/projects/infrastructure/nyuad-hpc-sequencer-automation', 'tar_run_folder.py'),
-    remote_filepath='{{params.sequence_run_work}}/tar_run_folder.py',
+    remote_filepath='{{ dag_run.conf["work_dir"] }}/tar_run_folder.py',
     operation='put',
     ssh_hook=ssh_hook,
     dag=dag,
@@ -160,8 +149,8 @@ tar_run_folder_command = """
         echo "{{ ds }}"
         module load gencore gencore_anaconda/3-4.0.0
         export PATH=/scratch/gencore/bcl2fastq-v2.20.0.422/bin/:$PATH
-        cd "{{ params.sequence_run_work }}"
-        python3 tar_run_folder.py --run-dir {{params.sequence_run_work}}
+        cd "{{ dag_run.conf["work_dir"] }}"
+        python3 tar_run_folder.py --run-dir {{ dag_run.conf["work_dir"] }}
 """
 tar_run_folder_task = SSHOperator(
     task_id='tar_run_folder_task',
@@ -170,23 +159,13 @@ tar_run_folder_task = SSHOperator(
     retries=5,
     retry_delay=10,
     do_xcom_push=True,
-    params={
-        'sequence_run_work': '/work/gencore/novaseq/180710_A00534_0022_AHFY3KDMXX',
-        'sequence_run_scratch': '/scratch/gencore/novaseq/180710_A00534_0022_AHFY3KDMXX',
-        'bcl2fastq': '/scratch/gencore/bcl2fastq-v2.20.0.422/bin/bcl2fastq',
-    },
     dag=dag
 )
 
 copy_archive_run_script_task = SFTPOperator(
     task_id='sftp_put_archive_run_script',
-    params={
-        'sequence_run_work': '/work/gencore/novaseq/180710_A00534_0022_AHFY3KDMXX',
-        'sequence_run_scratch': '/scratch/gencore/novaseq/180710_A00534_0022_AHFY3KDMXX',
-        'bcl2fastq': '/scratch/gencore/bcl2fastq-v2.20.0.422/bin/bcl2fastq',
-    },
     local_filepath=os.path.join('/Users/jillian/Dropbox/projects/infrastructure/nyuad-hpc-sequencer-automation', 'archive_run_folder.py'),
-    remote_filepath='{{params.sequence_run_work}}/archive_run_folder.py',
+    remote_filepath='{{ dag_run.conf["work_dir"] }}/archive_run_folder.py',
     operation='put',
     ssh_hook=ssh_hook,
     dag=dag,
@@ -196,21 +175,16 @@ archive_run_folder_command = """
         echo "{{ ds }}"
         module load gencore gencore_anaconda/3-4.0.0
         export PATH=/scratch/gencore/bcl2fastq-v2.20.0.422/bin/:$PATH
-        cd "{{ params.sequence_run_work }}"
-        python3 archive_run_folder.py --run-dir {{params.sequence_run_work}}
+        cd "{{ dag_run.conf["work_dir"] }}"
+        python3 archive_run_folder.py --run-dir {{ dag_run.conf["work_dir"] }}
 """
 archive_run_folder_task = SSHOperator(
     task_id='archive_run_dir_task',
     ssh_hook=ssh_hook,
     command=archive_run_folder_command,
     retries=5,
-    retry_delay=10,
+    retry_delay=100,
     do_xcom_push=True,
-    params={
-        'sequence_run_work': '/work/gencore/novaseq/180710_A00534_0022_AHFY3KDMXX',
-        'sequence_run_scratch': '/scratch/gencore/novaseq/180710_A00534_0022_AHFY3KDMXX',
-        'bcl2fastq': '/scratch/gencore/bcl2fastq-v2.20.0.422/bin/bcl2fastq',
-    },
     dag=dag
 )
 
