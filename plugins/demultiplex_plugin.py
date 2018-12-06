@@ -1,7 +1,7 @@
 # This is the class you derive to create a plugin
 from airflow.plugins_manager import AirflowPlugin
 
-from flask import Blueprint
+from flask import Blueprint, jsonify, request
 from flask_admin import BaseView, expose
 from flask_admin.base import MenuLink
 
@@ -37,7 +37,7 @@ def plugin_macro():
     pass
 
 
-class DemultiplexPluginView(BaseView):
+class Demultiplex(BaseView):
     """This creates a flask admin blueprint view (I think)
     It shows up as http://localhost:8080/admin/demultiplexpluginview/
     I don't know why the def is test instead of init or something normal
@@ -47,8 +47,13 @@ class DemultiplexPluginView(BaseView):
         # in this example, put your test_plugin/test.html template at airflow/plugins/templates/test_plugin/test.html
         return self.render("test_plugin/test.html", content="Hello galaxy!")
 
+    @expose('/hello', methods=['GET'])
+    def hello(self):
+        """Appears at : http://localhost:8080/admin/demultiplex/hello"""
+        return jsonify({'hello': 'FROM THE REST API'})
 
-v = DemultiplexPluginView(category="Demultiplex Plugin", name="Demultiplex Plugin")
+
+v = Demultiplex(category="Demultiplex", name="Demultiplex")
 
 # Creating a flask blueprint to integrate the templates and static folder
 bp = Blueprint(
@@ -57,15 +62,15 @@ bp = Blueprint(
     static_folder='static',
     static_url_path='/static/test_plugin')
 
+
 ml = MenuLink(
-    category='Demultiplex Plugin',
-    name='Demultiplex Menu Link',
-    url='https://airflow.incubator.apache.org/')
+    category='Demultiplex',
+    name='View Previous Runs',
+    url='/admin/airflow/tree?dag_id=sequencer_automation')
 
 
-# Defining the plugin class
 class AirflowDemultiplexPlugin(AirflowPlugin):
-    name = "test_view_plugin"
+    name = "demultiplex_plugin"
     operators = [PluginOperator]
     sensors = [PluginSensorOperator]
     hooks = [PluginHook]

@@ -2,6 +2,7 @@ import {BrowserModule} from '@angular/platform-browser';
 import {RouterModule, Routes} from '@angular/router';
 import {NgModule} from '@angular/core';
 import {FormsModule} from '@angular/forms';
+import { HttpClientModule} from '@angular/common/http';
 
 /**
  * Components
@@ -13,13 +14,18 @@ import {RunBiosailsWorkflowComponent} from './run-biosails-workflow/run-biosails
 import {RunBiosailsWorkflowRouteComponent} from './run-biosails-workflow-route/run-biosails-workflow-route.component';
 
 /**
+ * Modules
+ */
+import {AirflowModule} from './airflow/airflow.module';
+import {environment} from '../environments/environment';
+
+/**
  * UI Helpers
  */
 import {TypeaheadModule} from 'ngx-bootstrap/typeahead';
 import {UiSwitchModule} from 'ngx-ui-switch';
 import {NotFoundComponent} from './pages/not-found/not-found.component';
-import {AirflowService} from './airflow/airflow.service';
-import {HttpClient, HttpClientModule, HttpHandler} from '@angular/common/http';
+
 
 /**
  * Routes
@@ -31,6 +37,11 @@ const appRoutes: Routes = [
   // {path: '**', redirectTo: '/404'}
 ];
 
+// @ts-ignore
+const airflowApiUrl = environment.airflowApiUrl;
+console.log(`AirflowUrl: ${airflowApiUrl}`);
+console.log(JSON.stringify(environment));
+
 @NgModule({
   declarations: [
     AppComponent,
@@ -41,13 +52,14 @@ const appRoutes: Routes = [
     NotFoundComponent
   ],
   imports: [
-    HttpClientModule,
     FormsModule,
+    HttpClientModule,
     BrowserModule,
+    AirflowModule.forRoot({apiEndPoint: '/api/experimental', host: environment.airflowApiUrl, port: '8080'}),
     UiSwitchModule.forRoot({}),
     RouterModule.forRoot(
       appRoutes,
-      {enableTracing: true} // <-- debugging purposes only
+      // {enableTracing: true} // <-- debugging purposes only
     ),
     TypeaheadModule.forRoot()
   ],

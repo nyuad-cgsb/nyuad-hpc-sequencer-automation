@@ -1,3 +1,10 @@
 **/node_modules
 **/.idea
 .idea
+**/__pycache__
+jira_auth_strategy.py
+**/.DS_Store
+.ssh/*
+airflow/logs
+envs/environmental-variables.sh
+envs/*

@@ -1,25 +1,29 @@
-import {Injectable} from '@angular/core';
+import {Inject, Injectable, ModuleWithProviders, Optional} from '@angular/core';
 import {HttpClient, HttpHeaders} from '@angular/common/http';
 import {Observable} from 'rxjs';
-import {AirflowConfig} from '../../sdk/airflow/airflow-config';
+import {AirflowServiceConfig} from './airflow.token';
+import {AirflowModuleConfigOptions, AirflowModuleConfigOptionsDefaults} from './airflow.config';
 
 @Injectable({
   providedIn: 'root'
 })
-// header('Access-Control-Allow-Origin: *');
-// header('Access-Control-Allow-Methods: GET, POST, PATCH, PUT, DELETE, OPTIONS');
-// header('Access-Control-Allow-Headers: Origin, Content-Type, X-Auth-Token');
+
 export class AirflowService {
   httpOptions = {
     headers: new HttpHeaders({
       'Content-Type': 'application/json',
-      // 'Access-Control-Allow-Origin': 'http://localhost:8080',
-      // 'Access-Control-Allow-Methods': 'GET, POST, PATCH, PUT, DELETE, OPTIONS',
-      // 'Access-Control-Allow-Headers': 'Origin, Content-Type, X-Auth-Token',
+      // 'Access-Control-Allow-Origin': '*',
+      // 'Access-Control-Allow-Headers': '*',
     })
   };
 
-  constructor(private http: HttpClient) {
+  public config: AirflowModuleConfigOptions;
+
+  constructor(@Inject(AirflowServiceConfig) @Optional() config: AirflowModuleConfigOptions,
+              private http: HttpClient) {
+    this.config = new AirflowModuleConfigOptionsDefaults(config);
+    console.log(`CONFIG: ${JSON.stringify(config)}`);
+    console.log(`CONFIG: ${JSON.stringify(this.config)}`);
   }
 
   /**
@@ -34,10 +38,12 @@ export class AirflowService {
    -d '{"conf":"{\"hello\":\"world\"}"}'
    */
   triggerDag(dag_id: string, params: { conf, run_id }): Observable<any> {
-    return this.http.post('http://localhost:8080/api/experimental/dags/sequencer_automation/dag_runs', params, this.httpOptions);
+    return this.http.post(`${this.config.host}:${this.config.port}${this.config.apiEndPoint}/dags/${dag_id}/dag_runs`,
+      params, this.httpOptions);
   }
 
-  getTask(task_id: string): Observable<any> {
-    return this.http.get('http://localhost:8080/api/experimental/dags/sequencer_automation/tasks/archive_run_dir_task');
+  getTask(dag_id: string, task_id: string): Observable<any> {
+    return this.http.post(`${this.config.host}:${this.config.port}${this.config.apiEndPoint}/dags/${dag_id}/tasks/${task_id}`,
+      {}, this.httpOptions);
   }
 }

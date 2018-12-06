@@ -1,6 +1,11 @@
 from jira import JIRA
-import re
 from pprint import pprint
+import os
+
+"""WIP
+Phase 2 will be to use the JIRA API to update tickets
+For right now there is just the skeleton
+"""
 
 
 def read(file_path):
@@ -8,16 +13,16 @@ def read(file_path):
     with open(file_path) as f:
         return f.read()
 
-# The contents of the rsa.pem file generated (the private RSA key)
-key_cert = '/Users/jillian/.ssh/jira.pem'
+
+key_cert = os.path.join(os.path.expanduser('~'), '.ssh', 'jira.pem')
 RSA_KEY = read(key_cert)
 
 # The Consumer Key created while setting up the "Incoming Authentication" in
 # JIRA for the Application Link.
-CONSUMER_KEY = 'jira-cli'
-JIRA_SERVER = 'https://cbi.abudhabi.nyu.edu/jira'
-oauth_token = '1T1xc0MJUnBvHKA0o8D1IMR3ph90X278'
-oauth_token_secret = 'hHXVLpnrX64XjTRNEdPEjg1eaS3KpRev'
+CONSUMER_KEY = os.environ.get('CONSUMER_KEY')
+JIRA_SERVER = os.environ.get('JIRA_SERVER')
+oauth_token = os.environ.get('OAUTH_TOKEN')
+oauth_token_secret = os.environ.get('OAUTH_TOKEN_SECRET')
 
 # Now you can use the access tokens with the JIRA client. Hooray!
 jira = JIRA(options={'server': JIRA_SERVER}, oauth={
@@ -30,7 +35,6 @@ jira = JIRA(options={'server': JIRA_SERVER}, oauth={
 # print all of the project keys just as an exmaple
 for project in jira.projects():
     print(project.key)
-
 
 issue_dict = {
     'project': 'NCS',

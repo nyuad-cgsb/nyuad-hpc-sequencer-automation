@@ -1,6 +1,6 @@
 import { TestBed } from '@angular/core/testing';
 
-import { AirflowService } from './airflow.service';
+import {AirflowService} from './airflow.service';
 
 describe('AirflowService', () => {
   beforeEach(() => TestBed.configureTestingModule({}));

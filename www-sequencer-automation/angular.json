@@ -24,11 +24,11 @@
             ],
             "styles": [
               "src/styles.css",
+              "node_modules/ngx-ui-switch/ui-switch.component.css",
               "node_modules/bootstrap3/dist/css/bootstrap.min.css",
               "src/assets/css/bootstrap-theme.css",
               "src/assets/css/airflow-admin.css",
-              "src/assets/css/airflow-main.css",
-              "node_modules/ngx-ui-switch/ui-switch.component.css"
+              "src/assets/css/airflow-main.css"
             ],
             "scripts": [
               "node_modules/jquery/dist/jquery.min.js",

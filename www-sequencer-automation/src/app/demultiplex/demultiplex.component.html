@@ -21,55 +21,55 @@
         <small id="workPathHelp" class="form-text text-muted">This path must exist on dalma and be an absolute path.
         </small>
       </div>
-      <div class="form-group">
-        <label for="jiraTicket">JIRA Ticket</label>
-        <input type="text"
-               id="jiraTicket"
-               name="jiraTicket"
-               required
-               class="form-control"
-               (ngModelChange)="createRunId()"
-               [(ngModel)]="formResults.jiraTicket"
-               placeholder="Enter jira ticket"
-        >
-      </div>
-      <div class="form-group row">
-        <div class="col-md-2">
-          <label>Run QC Workflow?</label>
-        </div>
-        <div class="col-md-2">
-          <ui-switch name="runQcWorkflow" defaultBgColor="red" [(ngModel)]="formResults.runQcWorkflow"
-          ></ui-switch>
-        </div>
-        <div *ngIf="formResults.runQcWorkflow" class="col-md-8">
-          <label for="availableQCWorkflows">Available QC Workflows</label>
-          <input name="availableQCWorkflows"
-                 id="availableQCWorkflows"
-                 [(ngModel)]="formResults.qcWorkflow"
-                 [typeahead]="biosailsWorkflows.availableQCWorkflows"
-                 class="form-control">
-        </div>
-      </div>
-      <div class="form-group row">
-        <div class="col-md-2">
-          <label>Run Workflow?</label>
-        </div>
-        <div class="col-md-2">
-          <ui-switch name="runWorkflow" defaultBgColor="red" [(ngModel)]="formResults.runWorkflow"
-          ></ui-switch>
-        </div>
-        <div *ngIf="formResults.runWorkflow" class="col-md-8">
-          <label for="availableWorkflows">Available Workflows</label>
-          <input name="availableWorkflows"
-                 id="availableWorkflows"
-                 [(ngModel)]="formResults.workflow"
-                 [typeahead]="biosailsWorkflows.availableWorkflows"
-                 class="form-control">
-        </div>
-      </div>
       <!--<div class="form-group">-->
-        <!--<label for="runId">Run ID</label>-->
-        <!--<input type="text" class="form-control" id="runId" name="runId" [(ngModel)]="formResults.runId">-->
+      <!--<label for="jiraTicket">JIRA Ticket</label>-->
+      <!--<input type="text"-->
+      <!--id="jiraTicket"-->
+      <!--name="jiraTicket"-->
+      <!--required-->
+      <!--class="form-control"-->
+      <!--(ngModelChange)="createRunId()"-->
+      <!--[(ngModel)]="formResults.jiraTicket"-->
+      <!--placeholder="Enter jira ticket"-->
+      <!--&gt;-->
+      <!--</div>-->
+      <!--<div class="form-group row">-->
+      <!--<div class="col-md-2">-->
+      <!--<label>Run QC Workflow?</label>-->
+      <!--</div>-->
+      <!--<div class="col-md-2">-->
+      <!--<ui-switch name="runQcWorkflow" defaultBgColor="red" [(ngModel)]="formResults.runQcWorkflow"-->
+      <!--&gt;</ui-switch>-->
+      <!--</div>-->
+      <!--<div *ngIf="formResults.runQcWorkflow" class="col-md-8">-->
+      <!--<label for="availableQCWorkflows">Available QC Workflows</label>-->
+      <!--<input name="availableQCWorkflows"-->
+      <!--id="availableQCWorkflows"-->
+      <!--[(ngModel)]="formResults.qcWorkflow"-->
+      <!--[typeahead]="biosailsWorkflows.availableQCWorkflows"-->
+      <!--class="form-control">-->
+      <!--</div>-->
+      <!--</div>-->
+      <!--<div class="form-group row">-->
+      <!--<div class="col-md-2">-->
+      <!--<label>Run Workflow?</label>-->
+      <!--</div>-->
+      <!--<div class="col-md-2">-->
+      <!--<ui-switch name="runWorkflow" defaultBgColor="red" [(ngModel)]="formResults.runWorkflow"-->
+      <!--&gt;</ui-switch>-->
+      <!--</div>-->
+      <!--<div *ngIf="formResults.runWorkflow" class="col-md-8">-->
+      <!--<label for="availableWorkflows">Available Workflows</label>-->
+      <!--<input name="availableWorkflows"-->
+      <!--id="availableWorkflows"-->
+      <!--[(ngModel)]="formResults.workflow"-->
+      <!--[typeahead]="biosailsWorkflows.availableWorkflows"-->
+      <!--class="form-control">-->
+      <!--</div>-->
+      <!--</div>-->
+      <!--<div class="form-group">-->
+      <!--<label for="runId">Run ID</label>-->
+      <!--<input type="text" class="form-control" id="runId" name="runId" [(ngModel)]="formResults.runId">-->
       <!--</div>-->
       <button type="submit" class="btn btn-primary" [disabled]="!sequencerAutomationForm.form.valid">Submit</button>
     </form>
@@ -79,13 +79,14 @@
 <br>
 <br>
 
-<div>
-  <pre>
-
-    Submitted: {{submitted}}
-    Results: {{response | json}}
-    Error: {{error | json}}
-    RunId: {{formResults.runId}}
-  </pre>
+<div *ngIf="submitted">
+  <div *ngIf="formResults.runUrl" class="alert alert-success">
+    <strong>Success: Run Progress Available @</strong><br><a href="{{formResults.runUrl}}">Run
+    Id {{formResults.runId}}</a>
+  </div>
+  <div *ngIf="error" class="alert alert-danger">
+    <strong>Error</strong>
+    {{error | json}}
+  </div>
 </div>
 

@@ -5,6 +5,13 @@ RUN apt-get install -y vim-tiny vim-athena mysql-client ssh
 
 RUN adduser --home /home/airflow airflow
 
+RUN mkdir -p /home/airflow/airflow
+RUN mkdir -p /home/airflow/.ssh
+COPY airflow/airflow.cfg /home/airflow/airflow/airflow.cfg
+COPY airflow/airflow_cors.patch /home/airflow
+RUN chown -R airflow:airflow /home/airflow/airflow
+RUN chown -R airflow:airflow /home/airflow/.ssh
+
 USER airflow
 WORKDIR /home/airflow
 
@@ -21,5 +28,8 @@ ENV CONDA_PROMPT_MODIFIER (sequencer-automation)
 ENV CONDA_DEFAULT_ENV sequencer-automation
 ENV PATH /home/airflow/.conda/envs/sequencer-automation/bin:/opt/conda/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 
-COPY airflow/airflow.cfg /home/airflow/airflow/airflow.cfg
+RUN mv airflow_cors.patch /home/airflow/.conda/envs/sequencer-automation/lib && \
+    cd /home/airflow/.conda/envs/sequencer-automation/lib && \
+    patch python3.6/site-packages/airflow/www/app.py airflow_cors.patch
+
 #CMD airflow initdb
