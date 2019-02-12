@@ -10,6 +10,7 @@ from airflow.hooks.base_hook import BaseHook
 from airflow.models import BaseOperator
 from airflow.sensors.base_sensor_operator import BaseSensorOperator
 from airflow.executors.base_executor import BaseExecutor
+from airflow.www.app import csrf
 
 
 # Will show up under airflow.hooks.test_plugin.PluginHook
@@ -48,14 +49,19 @@ class Demultiplex(BaseView):
         return self.render("test_plugin/test.html", content="Hello galaxy!")
 
     @expose('/hello', methods=['GET'])
+    @csrf.exempt
     def hello(self):
-        """Appears at : http://localhost:8080/admin/demultiplex/hello"""
+        """Appears at : http://localhost:8080/admin/demultiplex/hello
+        This is just an example of how to use the rest API in a flask blueprint"""
         return jsonify({'hello': 'FROM THE REST API'})
 
 
 v = Demultiplex(category="Demultiplex", name="Demultiplex")
 
 # Creating a flask blueprint to integrate the templates and static folder
+# When trying to add css/js refs - use this
+# <link rel="stylesheet" href="{{ url_for('demultiplex_plugin.static', filename='styles.css') }}" type="text/css">
+
 bp = Blueprint(
     "demultiplex_plugin", __name__,
     template_folder='templates',

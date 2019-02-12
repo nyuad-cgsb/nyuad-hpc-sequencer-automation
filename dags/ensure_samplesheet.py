@@ -1,11 +1,10 @@
-import paramiko
 import argparse
 import logging
 import sys
 from typing import Any
 import os
-import re
 import tempfile
+import re
 
 try:
     from .ssh_helpers import execute_ssh_command, initialize_ssh
@@ -19,7 +18,58 @@ logger = logging.getLogger('ensure_samplesheet_compute-15')
 logger.setLevel(logging.DEBUG)
 
 
-def get_sample_name_from_run_dir(run_dir: str) -> str:
+def check_sample_name(sample_name):
+    """Check that the sample name only contains alphanumeric characters, underscores, and dashes
+    Returns: true if sample name is valid
+    false if sample name is invalid"""
+    return bool(re.match('^[\w-]+$', sample_name))
+
+
+def ensure_valid_sample_names(sample_file_contents):
+    """:param: sample_file_contents : Array<str> from fh.readlines()
+    :returns valid_sample_names: list of sample names that are valid and won't kill bcl2fastq
+    :returns invalid_sample_names: list of sample names that do not pass validation step"""
+    header_found = False
+    sample_lines = []
+    for line in sample_file_contents:
+        if not header_found:
+            if 'Sample_ID' in line:
+                header_found = True
+        else:
+            sample_lines.append(line)
+    invalid_sample_names = list(filter(lambda x: not check_sample_name, sample_lines))
+    valid_sample_names = list(filter(lambda x: check_sample_name, sample_lines))
+    return valid_sample_names, invalid_sample_names
+
+
+def validate_sample_names(filename: str):
+    """Sample names should ONLY contain alphanumeric characters, dashes, and underscores
+    :param filename : filename on the LOCAL computer"""
+    fh = open(filename, 'r')
+    sample_file_contents = fh.readlines()
+    sample_file_contents = list(map(lambda line: line.rstrip(), sample_file_contents))
+    return ensure_valid_sample_names(sample_file_contents)
+
+
+def validate_sample_names_from_work_dir(ssh_hook, work_dir):
+    """
+
+    :param ssh_hook: SSHHook from Airflow
+    :param run_dir: Sequencing run_dir from dag_run conf context
+    :return:
+    :valid_sample_names: List of sample names that passed validation
+    :invalid_sample_names: List of sample names that did NOT pass validation step
+    """
+    ssh_client = ssh_hook.get_conn()
+    sftp_client = ssh_client.open_sftp()
+    tfile_local_sample_sheet = tempfile.NamedTemporaryFile(delete=False)
+    sftp_client.get(os.path.join(work_dir, 'SampleSheet.csv'), tfile_local_sample_sheet.name)
+    valid_sample_names, invalid_sample_names = validate_sample_names(filename=tfile_local_sample_sheet.name)
+    os.remove(tfile_local_sample_sheet.name)
+    return valid_sample_names, invalid_sample_names
+
+
+def get_run_name_from_run_dir(run_dir: str) -> str:
     """param run_dir: str Run Directory on /work
     Given the run_dir /work/gencore/nextseq/181125_NB551229_0029_AHYGHVBGX5
     os.path.basename: 181125_NB551229_0029_AHYGHVBGX5
@@ -81,7 +131,8 @@ def ensure_sample_sheet_exists(run_dir_contents: list) -> str:
 
 
 def ensure_valid_csv_file(sftp, run_dir, csv_file):
-    """:param sftp sftpClient from paramiko
+    """
+    :param sftp sftpClient from paramiko
     :param run_dir : directory of run folder
     :param csv_file : csv file
     Each CSV file should have a [Header] declaration
@@ -94,7 +145,7 @@ def ensure_valid_csv_file(sftp, run_dir, csv_file):
     with open(tfile.name) as f:
         header_line = f.readline()
 
-    sample = get_sample_name_from_run_dir(run_dir)
+    sample = get_run_name_from_run_dir(run_dir)
     if sample in header_line:
         logger.info('{} in header'.format(sample))
         logger.info('[Header] in header')
@@ -105,6 +156,8 @@ def ensure_valid_csv_file(sftp, run_dir, csv_file):
     if 'SampleSheet.csv' not in csv_file:
         sftp.put(tfile.name, os.path.join(run_dir, 'SampleSheet.csv'))
         logger.info('Copied {} to SampleSheet.csv'.format(tfile.name))
+
+    os.remove(tfile.name)
 
 
 if __name__ == "__main__":

@@ -8,3 +8,4 @@ jira_auth_strategy.py
 airflow/logs
 envs/environmental-variables.sh
 envs/*
+html/*

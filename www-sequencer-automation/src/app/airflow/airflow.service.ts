@@ -12,8 +12,6 @@ export class AirflowService {
   httpOptions = {
     headers: new HttpHeaders({
       'Content-Type': 'application/json',
-      // 'Access-Control-Allow-Origin': '*',
-      // 'Access-Control-Allow-Headers': '*',
     })
   };
 
@@ -38,12 +36,23 @@ export class AirflowService {
    -d '{"conf":"{\"hello\":\"world\"}"}'
    */
   triggerDag(dag_id: string, params: { conf, run_id }): Observable<any> {
-    return this.http.post(`${this.config.host}:${this.config.port}${this.config.apiEndPoint}/dags/${dag_id}/dag_runs`,
+    return this.http.post(`${this.config.host}${this.config.port}${this.config.apiEndPoint}/dags/${dag_id}/dag_runs`,
       params, this.httpOptions);
   }
 
   getTask(dag_id: string, task_id: string): Observable<any> {
-    return this.http.post(`${this.config.host}:${this.config.port}${this.config.apiEndPoint}/dags/${dag_id}/tasks/${task_id}`,
+    return this.http.post(`${this.config.host}${this.config.port}${this.config.apiEndPoint}/dags/${dag_id}/tasks/${task_id}`,
       {}, this.httpOptions);
   }
+
+  createJiraTicket(summary: string, description: string): Observable<any> {
+    return this.http.post(`${this.config.host}${this.config.port}/jira/create_jira_ticket`,
+      {summary: summary, description: description}, this.httpOptions);
+  }
+
+  getJiraTicket(ticket_id: string): Observable<any> {
+    return this.http.post(`${this.config.host}${this.config.port}/jira/get_jira_ticket`,
+      {ticketId: ticket_id}, this.httpOptions);
+  }
+
 }

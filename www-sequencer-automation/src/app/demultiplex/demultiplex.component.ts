@@ -1,7 +1,8 @@
 import {Component, OnInit} from '@angular/core';
 import {BiosailsWorkflowsModule} from '../biosails-workflows/biosails-workflows.module';
-import {padStart} from 'lodash';
+import {get, padStart} from 'lodash';
 import {AirflowService} from '../airflow/airflow.service';
+import {environment} from '../../environments/environment';
 
 @Component({
   selector: 'app-demultiplex',
@@ -12,10 +13,12 @@ import {AirflowService} from '../airflow/airflow.service';
 export class DemultiplexComponent implements OnInit {
   submitted = false;
   formResults = new DemultiplexComponentFormResult();
-  biosailsWorkflows = new BiosailsWorkflowsModule();
   error: string = null;
   response: any = null;
   runUrl: string = null;
+  jiraTicket: JIRATicket = new JIRATicket();
+  // Default is to use an existing ticket
+  useExistingTicket: Boolean = true;
 
   constructor(private airflowService: AirflowService) {
   }
@@ -28,11 +31,20 @@ export class DemultiplexComponent implements OnInit {
     this.response = null;
     this.error = null;
 
+    if (!this.formResults.jiraTicket) {
+      this.createJiraTicket();
+    } else {
+      this.triggerDag();
+    }
+  }
+
+  triggerDag() {
     this.createRunId();
     this.airflowService.triggerDag('sequencer_automation', {
       conf: JSON.stringify({
         work_dir: this.formResults.workDir,
         scratch_dir: this.formResults.scratchDir,
+        jira_ticket: this.formResults.jiraTicket,
       }),
       run_id: this.formResults.runId,
     })
@@ -41,6 +53,39 @@ export class DemultiplexComponent implements OnInit {
         this.getRunUrl();
       }, (error) => {
         this.error = error;
+      });
+  }
+
+  createJiraTicket() {
+    this.airflowService.createJiraTicket(this.jiraTicket.summary, this.jiraTicket.description)
+      .subscribe((results: { id, error, summary, description }) => {
+        if (get(results, 'error')) {
+          this.formResults.jiraTicketError = true;
+        } else {
+          console.log(JSON.stringify(results));
+          this.formResults.jiraTicket = results.id;
+          this.formResults.jiraTicketError = false;
+          this.jiraTicket = new JIRATicket(this.formResults.jiraTicket, results.summary, results.description);
+          this.triggerDag();
+        }
+      }, (error) => {
+        console.log(error);
+      });
+  }
+
+  checkRunId() {
+    this.formResults.jiraTicketError = null;
+    this.jiraTicket = new JIRATicket();
+    this.airflowService.getJiraTicket(this.formResults.jiraTicket)
+      .subscribe((results: { error, summary, description }) => {
+        if (get(results, 'error')) {
+          this.formResults.jiraTicketError = true;
+        } else {
+          this.formResults.jiraTicketError = false;
+          this.jiraTicket = new JIRATicket(this.formResults.jiraTicket, results.summary, results.description);
+        }
+      }, (error) => {
+        console.log(error);
       });
   }
 
@@ -67,8 +112,11 @@ export class DemultiplexComponent implements OnInit {
   getRunUrl() {
     const timeSubmittedRegexp = new RegExp(`.*@ (.*): ${this.formResults.runId}`);
     const executionDate = timeSubmittedRegexp.exec(this.response.message)[1];
-    const url = `http://localhost:8080/admin/airflow/graph?dag_id=sequencer_automation&run_id=${this.formResults.runId}&executionDate${executionDate}`;
+    const url = [`${environment.airflowApiUrl}${environment.airflowPort}/admin/airflow/graph?`,
+      `dag_id=sequencer_automation`,
+      `&run_id=${this.formResults.runId}&executionDate${executionDate}`].join('');
     this.formResults.runUrl = encodeURI(url);
+    this.formResults.jiraUrl = `https://cbi.abudhabi.nyu.edu/jira/browse/${this.formResults.jiraTicket}`;
   }
 
 }
@@ -77,10 +125,21 @@ export class DemultiplexComponentFormResult {
   workDir: string = null;
   scratchDir: string = null;
   jiraTicket: string = null;
-  runQcWorkflow: Boolean;
-  runWorkflow: Boolean;
-  qcWorkflow: string = null;
-  workflow: string = null;
+  jiraTicketError: Boolean = false;
   runId: string = null;
   runUrl: string = null;
+  jiraUrl: string = null;
 }
+
+export class JIRATicket {
+  description?: string = null;
+  ticketId?: string = null;
+  summary?: string = null;
+
+  constructor(ticketId?, summary?, description?) {
+    this.ticketId = ticketId;
+    this.summary = summary;
+    this.description = description;
+  }
+}
+

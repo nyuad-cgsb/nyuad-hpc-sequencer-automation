@@ -2,7 +2,7 @@ import {BrowserModule} from '@angular/platform-browser';
 import {RouterModule, Routes} from '@angular/router';
 import {NgModule} from '@angular/core';
 import {FormsModule} from '@angular/forms';
-import { HttpClientModule} from '@angular/common/http';
+import {HttpClientModule} from '@angular/common/http';
 
 /**
  * Components
@@ -55,7 +55,7 @@ console.log(JSON.stringify(environment));
     FormsModule,
     HttpClientModule,
     BrowserModule,
-    AirflowModule.forRoot({apiEndPoint: '/api/experimental', host: environment.airflowApiUrl, port: '8080'}),
+    AirflowModule.forRoot({apiEndPoint: '/api/experimental', host: environment.airflowApiUrl, port: environment.airflowPort}),
     UiSwitchModule.forRoot({}),
     RouterModule.forRoot(
       appRoutes,

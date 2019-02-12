@@ -63,6 +63,8 @@ services:
     # docker tag sequence_automation_airflow quay.io/nyuad_cgsb/sequence_automation_airflow:latest
     airflow_sequencer_automation:
 #        image: quay.io/nyuad_cgsb/sequence_automation_airflow
+        env_file:
+            - .env
         build:
             context: .
             dockerfile: Dockerfile
@@ -79,9 +81,11 @@ services:
             AIRFLOW_HOST: airflow_mysql_db
             RABBIT_MQ_HOST: rabbit
         command: >
-            bash -c "/home/airflow/scripts/wait-for-it.sh -p 3306 -h airflow_mysql_db -- airflow initdb; tail -f /dev/null"
+            bash -c "/home/airflow/scripts/install_python_packages.sh; /home/airflow/scripts/wait-for-it.sh -p 3306 -h airflow_mysql_db -- airflow initdb; tail -f /dev/null"
         volumes:
 #            - ./airflow:/home/airflow/airflow
+            - ./pkgs:/home/airflow/pkgs
+            - ./html:/home/airflow/html:rw
             - ./plugins:/home/airflow/plugins
             - ./dags:/home/airflow/dags
             - ./.ssh:/home/airflow/.ssh:z
@@ -91,6 +95,8 @@ services:
 
     airflow_sequencer_automation_scheduler:
 #        image: quay.io/nyuad_cgsb/sequence_automation_airflow
+        env_file:
+            - .env
         build:
             context: .
             dockerfile: Dockerfile
@@ -108,9 +114,11 @@ services:
             AIRFLOW_HOST: airflow_mysql_db
             RABBIT_MQ_HOST: rabbit
         command: >
-            bash -c "/home/airflow/scripts/wait-for-it.sh -p 3306 -h airflow_mysql_db -- airflow scheduler"
+            bash -c "/home/airflow/scripts/install_python_packages.sh; /home/airflow/scripts/wait-for-it.sh -p 3306 -h airflow_mysql_db -- airflow scheduler"
         volumes:
 #            - ./airflow:/home/airflow/airflow
+            - ./pkgs:/home/airflow/pkgs
+            - ./html:/home/airflow/html:rw
             - ./plugins:/home/airflow/plugins
             - ./dags:/home/airflow/dags
             - ./.ssh:/home/airflow/.ssh:z
@@ -120,6 +128,8 @@ services:
 
     airflow_sequencer_automation_webserver:
 #        image: quay.io/nyuad_cgsb/sequence_automation_airflow
+        env_file:
+            - .env
         build:
             context: .
             dockerfile: Dockerfile
@@ -137,11 +147,12 @@ services:
             RABBIT_RESULTS_HOST: celery_results_mysql_db
             AIRFLOW_HOST: airflow_mysql_db
             RABBIT_MQ_HOST: rabbit
-#            bash -c "sleep 200; airflow webserver"
         command: >
-            bash -c "/home/airflow/scripts/wait-for-it.sh -p 3306 -h airflow_mysql_db -- airflow webserver"
+            bash -c "/home/airflow/scripts/install_python_packages.sh; /home/airflow/scripts/wait-for-it.sh -p 3306 -h airflow_mysql_db -- airflow webserver"
         volumes:
 #            - ./airflow:/home/airflow/airflow
+            - ./pkgs:/home/airflow/pkgs
+            - ./html:/home/airflow/html:rw
             - ./plugins:/home/airflow/plugins
             - ./dags:/home/airflow/dags
             - ./.ssh:/home/airflow/.ssh:z
@@ -154,6 +165,8 @@ services:
 
     airflow_sequencer_automation_worker:
 #        image: quay.io/nyuad_cgsb/sequence_automation_airflow
+        env_file:
+            - .env
         build:
             context: .
             dockerfile: Dockerfile
@@ -172,9 +185,11 @@ services:
             AIRFLOW_HOST: airflow_mysql_db
             RABBIT_MQ_HOST: rabbit
         command: >
-            bash -c "/home/airflow/scripts/wait-for-it.sh -p 3306 -h airflow_mysql_db -- airflow worker"
+            bash -c "/home/airflow/scripts/install_python_packages.sh; /home/airflow/scripts/wait-for-it.sh -p 3306 -h airflow_mysql_db -- airflow worker"
         volumes:
 #            - ./airflow:/home/airflow/airflow
+            - ./pkgs:/home/airflow/pkgs
+            - ./html:/home/airflow/html:rw
             - ./plugins:/home/airflow/plugins
             - ./dags:/home/airflow/dags
             - ./.ssh:/home/airflow/.ssh:z
@@ -183,6 +198,15 @@ services:
             - "8793:8793"
         networks:
           - app-tier
+
+    demultiplex_reports:
+        image: nginx
+        volumes:
+            - ./html:/usr/share/nginx/html:rw
+        ports:
+            - "8081:80"
+        networks:
+            - app-tier
 
 networks:
   app-tier:
