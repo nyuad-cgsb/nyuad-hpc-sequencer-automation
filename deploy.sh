@@ -13,6 +13,7 @@ ng build --prod  --output-hashing none --configuration=production --output-path 
 # Build additional front end functionality for plugins
 ###############################################################################
 cd ../..
+ssh -p 4410 jdr400@10.230.12.10 "cd /home/jdr400/DEPLOY/ && rm -rf nyuad-hpc-sequencer-automation"
 rsync -avz -e 'ssh -p 4410' nyuad-hpc-sequencer-automation "jdr400@10.230.12.10:/home/jdr400/DEPLOY"
-#ssh -p 4410 jdr400@10.230.12.10 "cd /home/jdr400/DEPLOY/nyuad-hpc-sequencer-automation/ && docker-compose stop; docker-compose rm -f; docker-compose up -d"
+ssh -p 4410 jdr400@10.230.12.10 "cd /home/jdr400/DEPLOY/nyuad-hpc-sequencer-automation/ && docker-compose stop; docker-compose rm -f -v; docker-compose up -d"
 ssh -p 4410 jdr400@10.230.12.10 "cd /home/jdr400/DEPLOY/nyuad-hpc-sequencer-automation/ && docker-compose restart"

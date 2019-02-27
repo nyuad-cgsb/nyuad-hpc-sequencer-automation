@@ -3,6 +3,8 @@ import tempfile
 import os
 import re
 
+from ensure_samplesheet import ensure_valid_sample_names, check_sample_name
+
 sample_file = """Assay,TruSeq Nano DNA,,,,,,,,,
 Index Adapters,TruSeq DNA CD Indexes (96 Indexes),,,,,,,,,
 Chemistry,Amplicon,,,,,,,,,
@@ -37,7 +39,7 @@ P4G04-C2LB_2,,,,G04,D704,GAGATTCC,D507,ACGTCCTG,,
 """
 
 
-def read_samplesheet():
+def create_dummy_samplesheet():
     new_file, filename = tempfile.mkstemp()
     fh = open(filename, 'w')
     fh.write(sample_file)
@@ -45,9 +47,25 @@ def read_samplesheet():
     fh = open(filename, 'r')
     lines = fh.readlines()
     lines = list(map(lambda line: line.rstrip(), lines))
-    pass
+    fh.close()
+    return lines
 
 
-class MyTest(unittest.TestCase):
+class TestEnsureValidSampleNames(unittest.TestCase):
     def test(self):
-        self.assertEqual(3, 3)
+        lines = create_dummy_samplesheet()
+        valid_sample_names, invalid_sample_names = ensure_valid_sample_names(lines)
+        self.assertEqual(len(valid_sample_names), 17)
+        self.assertEqual(len(invalid_sample_names), 0)
+
+
+class TestEnsureValidSampleName(unittest.TestCase):
+    def test(self):
+        is_valid = check_sample_name('Sample_123')
+        is_not_valid = check_sample_name('Sample!! hello world')
+        self.assertEqual(is_valid, True)
+        self.assertEqual(is_not_valid, False)
+
+
+if __name__ == '__main__':
+    unittest.main()

@@ -6,14 +6,8 @@ import os
 import tempfile
 import re
 
-try:
-    from .ssh_helpers import execute_ssh_command, initialize_ssh
-except ImportError as e:
-    from ssh_helpers import execute_ssh_command, initialize_ssh
-except Exception as e:
-    from ssh_helpers import execute_ssh_command, initialize_ssh
+from ssh_helpers import execute_ssh_command, initialize_ssh
 
-# create logger with 'spam_application'
 logger = logging.getLogger('ensure_samplesheet_compute-15')
 logger.setLevel(logging.DEBUG)
 
@@ -81,10 +75,10 @@ def get_run_name_from_run_dir(run_dir: str) -> str:
     return os.path.basename(run_dir).split('_').pop().replace('A', '', 1)
 
 
-def ensure_run_dir_exists(run_dir: str) -> list:
+def ensure_run_dir_exists(sftp, run_dir: str) -> list:
     """TODO: This should just be a task in the dag"""
     try:
-        run_dir_contents = sftp.listdir(args.run_dir)
+        run_dir_contents = sftp.listdir(run_dir)
     except FileNotFoundError as e:
         print('Error occurred accessing run directory {}'.format(run_dir))
         print(e)
@@ -101,7 +95,7 @@ def grep_for_csvs(csv_list: list, search_string: str) -> list:
     return [i for i, item in enumerate(csv_list) if re.search(search_string, item)]
 
 
-def ensure_sample_sheet_exists(run_dir_contents: list) -> str:
+def ensure_sample_sheet_exists_in_work_dir(run_dir_contents: list) -> str:
     """:param run_dir_contents  - list of contents from the run directory
     If :
         there is a SampleSheet.csv just carry on
@@ -130,10 +124,10 @@ def ensure_sample_sheet_exists(run_dir_contents: list) -> str:
     return csv_file
 
 
-def ensure_valid_csv_file(sftp, run_dir, csv_file):
+def ensure_valid_csv_file(sftp, work_dir, csv_file):
     """
     :param sftp sftpClient from paramiko
-    :param run_dir : directory of run folder
+    :param work_dir : directory of run folder on /work
     :param csv_file : csv file
     Each CSV file should have a [Header] declaration
     and should have the sample name
@@ -141,11 +135,11 @@ def ensure_valid_csv_file(sftp, run_dir, csv_file):
     logger.info('Begin: Ensuring CSV file {} is valid'.format(csv_file))
 
     tfile = tempfile.NamedTemporaryFile(delete=False)
-    sftp.get(os.path.join(run_dir, csv_file), tfile.name, callback=None)
+    sftp.get(os.path.join(work_dir, csv_file), tfile.name, callback=None)
     with open(tfile.name) as f:
         header_line = f.readline()
 
-    sample = get_run_name_from_run_dir(run_dir)
+    sample = get_run_name_from_run_dir(work_dir)
     if sample in header_line:
         logger.info('{} in header'.format(sample))
         logger.info('[Header] in header')
@@ -154,28 +148,49 @@ def ensure_valid_csv_file(sftp, run_dir, csv_file):
     logger.info('End: Ensuring CSV file {} is valid'.format(csv_file))
 
     if 'SampleSheet.csv' not in csv_file:
-        sftp.put(tfile.name, os.path.join(run_dir, 'SampleSheet.csv'))
+        sftp.put(tfile.name, os.path.join(work_dir, 'SampleSheet.csv'))
         logger.info('Copied {} to SampleSheet.csv'.format(tfile.name))
 
     os.remove(tfile.name)
 
 
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description='Ensure SampleSheet.')
-    parser.add_argument('--run-dir', type=str, required=True,
-                        help='Run directory')
-
-    args = parser.parse_args()
-    args.run_dir = args.run_dir.strip()
-
-    ssh, sftp = initialize_ssh('gencore', 'compute-15-1')
+def ensure_sample_sheet_exists_and_is_valid_csv(ds, **kwargs):
+    work_dir = kwargs['dag_run'].conf['work_dir']
+    logger.info('Begin: Sample sheet check for {}'.format(work_dir))
+    ssh, sftp = initialize_ssh('gencore', 'dalma.abudhabi.nyu.edu')
 
     logger.info('=============================================')
     logger.info('Beginning Sample Sheet Job')
-    run_dir_contents = ensure_run_dir_exists(args.run_dir)
-    csv_file = ensure_sample_sheet_exists(run_dir_contents)
-    ensure_valid_csv_file(sftp, args.run_dir, csv_file)
+
+    run_dir_contents = ensure_run_dir_exists(sftp, work_dir)
+    csv_file = ensure_sample_sheet_exists_in_work_dir(run_dir_contents)
+    ensure_valid_csv_file(sftp, work_dir, csv_file)
+
     logger.info('Ending Sample Sheet Job')
     logger.info('=============================================')
 
-    ssh.close()
+
+# if __name__ == "__main__":
+#     """
+#     This has been refactored as a PythonOperator
+#     Recommended way to run this is through the Airflow PythonOperator interface
+#     But I'll keep this here anyways
+#     """
+#     parser = argparse.ArgumentParser(description='Ensure SampleSheet.')
+#     parser.add_argument('--run-dir', type=str, required=True,
+#                         help='Run directory')
+#
+#     args = parser.parse_args()
+#     args.run_dir = args.run_dir.strip()
+#
+#     ssh, sftp = initialize_ssh('gencore', 'compute-15-1')
+#
+#     logger.info('=============================================')
+#     logger.info('Beginning Sample Sheet Job')
+#     run_dir_contents = ensure_run_dir_exists(args.run_dir)
+#     csv_file = ensure_sample_sheet_exists_in_work_dir(run_dir_contents)
+#     ensure_valid_csv_file(sftp, args.run_dir, csv_file)
+#     logger.info('Ending Sample Sheet Job')
+#     logger.info('=============================================')
+#
+#     ssh.close()

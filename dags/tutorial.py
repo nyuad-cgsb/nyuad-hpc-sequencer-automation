@@ -60,11 +60,6 @@ def print_context(ds, **kwargs):
     pprint(kwargs)
     pprint(kwargs['dag_run'].conf)
     print(ds)
-    print('Current dir is ...')
-    print(os.path.dirname(os.path.realpath(__file__)))
-    for root, dirs, files in os.walk("."):
-        for filename in files:
-            print(filename)
     return 'Whatever you return gets printed in the logs'
 
 
