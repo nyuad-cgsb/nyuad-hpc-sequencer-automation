@@ -6,6 +6,7 @@ executors:
 
 jobs:
   build:
+    working_directory: nyuad-hpc-sequencer-automation
     executor: machine
     steps:
       - checkout
