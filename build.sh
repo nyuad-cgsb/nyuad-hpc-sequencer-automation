@@ -2,7 +2,7 @@
 
 set -x -e
 
-docker-compose up -d --build
+docker-compose up -d --build  --abort-on-container-exit
 
 scripts/wait-for-it.sh -p 8080 -h localhost -- echo "Webserver is up"
 
