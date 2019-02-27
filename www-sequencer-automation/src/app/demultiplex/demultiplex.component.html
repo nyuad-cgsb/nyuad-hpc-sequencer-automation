@@ -1,0 +1,119 @@
+<div class="row">
+  <div class="col-md-12">
+    <h2>Start a sequencing job</h2>
+  </div>
+</div>
+
+<div class="row">
+  <div class="col-md-12">
+    <form (ngSubmit)="onSubmit()" id="sequencer-automation-form" #sequencerAutomationForm="ngForm">
+      <div class="form-group">
+        <label for="inputWorkPath">Dalma Path</label>
+        <input type="text"
+               name="inputWorkPath"
+               class="form-control"
+               id="inputWorkPath"
+               aria-describedby="workPathHelp"
+               required
+               [(ngModel)]="formResults.workDir"
+               minlength="10"
+               (ngModelChange)="createRunId()"
+               placeholder="Enter workPath">
+        <small id="workPathHelp" class="form-text text-muted">This path must exist on dalma and be an absolute path.
+        </small>
+      </div>
+
+      <!--Begin : Toggle Use Existing / Create Ticket-->
+      <div class="row form-group">
+        <div class="col-md-4">
+          <strong>Use Existing Ticket?</strong>
+        </div>
+        <div class="col-md-4">
+          <ui-switch name="toggleUseExistingTicket" [(ngModel)]="useExistingTicket"></ui-switch>
+        </div>
+      </div>
+      <!--End : Toggle Use Existing / Create Ticket-->
+
+      <!--Begin: Choose Existing JIRA Ticket-->
+      <div *ngIf="useExistingTicket">
+        <div class="form-group row">
+          <div class="col-md-4">
+            <label for="jiraTicket">Existing JIRA Ticket</label>
+          </div>
+          <div class="col-md-6">
+            <input type="text"
+                   id="jiraTicket"
+                   name="jiraTicket"
+                   class="form-control"
+                   minlength="4"
+                   [(ngModel)]="formResults.jiraTicket"
+                   (ngModelChange)="checkRunId()"
+                   placeholder="Enter jira ticket"
+            >
+          </div>
+        </div>
+        <div *ngIf="formResults.jiraTicketError" class="alert alert-warning">
+          <p>Jira Ticket is not valid</p>
+        </div>
+        <div *ngIf="jiraTicket?.ticketId" class="alert alert-success">
+          <p>Jira Ticket is valid</p>
+          <strong>Summary: </strong>
+          <p>{{jiraTicket?.summary}}</p>
+          <strong>Description: </strong>
+          <p>{{jiraTicket?.description}}</p>
+        </div>
+      </div>
+      <!--End: Choose Existing JIRA Ticket-->
+
+      <!--Begin: Create JIRA Ticket-->
+      <div *ngIf="!useExistingTicket">
+        <div class="form-group">
+          <label for="jiraSummary">Summary</label>
+          <input type="text"
+                 id="jiraSummary"
+                 name="jiraSummary"
+                 class="form-control"
+                 minlength="4"
+                 [(ngModel)]="jiraTicket.summary"
+                 placeholder="Ticket Summary"
+          >
+        </div>
+        <div class="form-group">
+          <label for="jiraDescription">Description</label>
+          <input type="text"
+                 id="jiraDescription"
+                 name="jiraDescription"
+                 class="form-control"
+                 minlength="4"
+                 [(ngModel)]="jiraTicket.description"
+                 placeholder="Ticket Description"
+          >
+        </div>
+      </div>
+      <!--End: Create JIRA Ticket-->
+
+      <button type="submit" class="btn btn-primary"
+              [disabled]="!sequencerAutomationForm.form.valid && !formResults.jiraTicketError && formResults.jiraTicket">
+        Submit
+      </button>
+    </form>
+  </div>
+</div>
+
+<br>
+<br>
+
+<div *ngIf="submitted">
+  <div *ngIf="formResults.runUrl" class="alert alert-success">
+    <strong>Success: Run Progress Available @</strong><br><a href="{{formResults.runUrl}}">Run
+    Id {{formResults.runId}}</a>
+    <br>
+    <strong>JIRA Ticket @</strong><br><a href="{{formResults.jiraUrl}}">JIRA Ticket
+    {{formResults.jiraTicket}}</a>
+  </div>
+  <div *ngIf="error" class="alert alert-danger">
+    <strong>Error</strong>
+    {{error | json}}
+  </div>
+</div>
+

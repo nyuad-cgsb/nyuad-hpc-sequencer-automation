@@ -1,0 +1,173 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>WwwSequencerAutomation</title>
+  <base href="/">
+
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="icon" type="image/x-icon" href="favicon.ico">
+  <style>
+    body {
+      padding-top: 4px;
+    }
+  </style>
+</head>
+<body>
+<div class="container">
+  <nav class="navbar navbar-inverse navbar-fixed-top" role="navigation" style="background-color: #007A87;">
+    <div class="container">
+      <!-- Brand and toggle get grouped for better mobile display -->
+      <div class="navbar-header">
+        <button type="button" class="navbar-toggle" data-toggle="collapse" data-target="#admin-navbar-collapse">
+          <span class="sr-only" data-original-title="" title="">Toggle navigation</span>
+          <span class="icon-bar" data-original-title="" title=""></span>
+          <span class="icon-bar" data-original-title="" title=""></span>
+          <span class="icon-bar" data-original-title="" title=""></span>
+        </button>
+        <a class="navbar-brand" rel="home" href="/admin/" style="cursor: pointer;">
+          <img style="float: left; width:35px; margin-top: -7px;" src="/static/pin_100.png" title="">
+          <span data-original-title="" title="">Airflow</span>
+        </a>
+      </div>
+      <!-- navbar content -->
+      <div class="collapse navbar-collapse" id="admin-navbar-collapse">
+
+        <ul class="nav navbar-nav">
+
+
+          <li>
+            <a href="/admin/">DAGs</a>
+          </li>
+          <li class="dropdown">
+            <a class="dropdown-toggle" data-toggle="dropdown" href="javascript:void(0)">
+              Data Profiling<b class="caret"></b>
+            </a>
+            <ul class="dropdown-menu">
+              <li>
+                <a href="/admin/queryview/">Ad Hoc Query</a>
+              </li>
+              <li>
+                <a href="/admin/chart/">Charts</a>
+              </li>
+              <li>
+                <a href="/admin/knownevent/">Known Events</a>
+              </li>
+            </ul>
+          </li>
+
+          <li class="dropdown">
+            <a class="dropdown-toggle" data-toggle="dropdown" href="javascript:void(0)">
+              Browse<b class="caret"></b>
+            </a>
+            <ul class="dropdown-menu">
+              <li>
+                <a href="/admin/slamiss/">SLA Misses</a>
+              </li>
+              <li>
+                <a href="/admin/taskinstance/">Task Instances</a>
+              </li>
+              <li>
+                <a href="/admin/log/">Logs</a>
+              </li>
+              <li>
+                <a href="/admin/basejob/">Jobs</a>
+              </li>
+              <li>
+                <a href="/admin/dagrun/">DAG Runs</a>
+              </li>
+            </ul>
+          </li>
+
+          <li class="dropdown">
+            <a class="dropdown-toggle" data-toggle="dropdown" href="javascript:void(0)">
+              Admin<b class="caret"></b>
+            </a>
+            <ul class="dropdown-menu">
+              <li>
+                <a href="/admin/pool/">Pools</a>
+              </li>
+              <li>
+                <a href="/admin/configurationview/">Configuration</a>
+              </li>
+              <li>
+                <a href="/admin/user/">Users</a>
+              </li>
+              <li>
+                <a href="/admin/connection/">Connections</a>
+              </li>
+              <li>
+                <a href="/admin/variable/">Variables</a>
+              </li>
+              <li>
+                <a href="/admin/xcom/">XComs</a>
+              </li>
+            </ul>
+          </li>
+
+          <li class="dropdown">
+            <a class="dropdown-toggle" data-toggle="dropdown" href="javascript:void(0)">
+              Docs<b class="caret"></b>
+            </a>
+            <ul class="dropdown-menu">
+              <li>
+                <a href="https://airflow.incubator.apache.org/">Documentation</a>
+              </li>
+              <li>
+                <a href="https://github.com/apache/incubator-airflow">Github</a>
+              </li>
+            </ul>
+          </li>
+
+          <li class="dropdown">
+            <a class="dropdown-toggle" data-toggle="dropdown" href="javascript:void(0)">
+              About<b class="caret"></b>
+            </a>
+            <ul class="dropdown-menu">
+              <li>
+                <a href="/admin/versionview/">Version</a>
+              </li>
+            </ul>
+          </li>
+
+
+          <li class="active dropdown">
+
+            <a class="dropdown-toggle" data-toggle="dropdown" href="javascript:void(0)">
+              Demultiplex Plugin<b class="caret"></b>
+            </a>
+            <ul class="dropdown-menu">
+              <li class="active">
+
+                <a href="/admin/demultiplexpluginview/">Demultiplex Plugin</a>
+              </li>
+              <li>
+                <a href="https://airflow.incubator.apache.org/">Demultiplex Menu Link</a>
+              </li>
+            </ul>
+          </li>
+        </ul>
+
+
+        <ul class="nav navbar-right">
+        </ul>
+
+        <!-- clock and logout -->
+        <ul class="nav navbar-nav navbar-right">
+          <li><a id="clock" class="jqclock"><span class="clockdate">2018-11-14 </span><span class="clocktime">08:07:31 UTC</span></a>
+          </li>
+
+          <li class="never_active"><a href="/admin/airflow/logout"><span data-toggle="tooltip" data-placement="left"
+                                                                         title="" class="glyphicon glyphicon-log-out"
+                                                                         data-original-title="Logout"></span></a></li>
+
+        </ul>
+        <ul class="nav navbar-nav navbar-right">
+        </ul>
+      </div>
+    </div>
+  </nav>
+  <app-root></app-root>
+</div>
+</body>
+</html>
