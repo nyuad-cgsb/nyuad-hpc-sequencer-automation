@@ -3,7 +3,8 @@
 set -x -e
 
 docker-compose up -d --build
-sleep 60
+
+scripts/wait-for-it.sh -p 8080 -h localhost -- echo "Webserver is up"
 
 curl -X GET \
     http://localhost:8080/admin/demultiplex/health \
