@@ -48,12 +48,12 @@ class Demultiplex(BaseView):
         # in this example, put your test_plugin/test.html template at airflow/plugins/templates/test_plugin/test.html
         return self.render("test_plugin/test.html", content="Hello galaxy!")
 
-    @expose('/hello', methods=['GET'])
+    @expose('/health', methods=['GET'])
     @csrf.exempt
-    def hello(self):
+    def health(self):
         """Appears at : http://localhost:8080/admin/demultiplex/hello
         This is just an example of how to use the rest API in a flask blueprint"""
-        return jsonify({'hello': 'FROM THE REST API'})
+        return jsonify({'health': 'Status OK'})
 
 
 v = Demultiplex(category="Demultiplex", name="Demultiplex")

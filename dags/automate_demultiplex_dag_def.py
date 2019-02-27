@@ -2,17 +2,17 @@ from airflow import DAG
 from airflow.contrib.hooks.ssh_hook import SSHHook
 from airflow.contrib.operators.ssh_operator import SSHOperator
 from datetime import datetime, timedelta
-from airflow.contrib.operators.sftp_operator import SFTPOperator
 from airflow.operators.bash_operator import BashOperator
 from airflow.operators.python_operator import PythonOperator
 import os
 from pprint import pprint
 from nyuad_cgsb_jira_client.jira_client import jira_client
 
-try:
-    from .ensure_samplesheet import validate_sample_names_from_work_dir
-except Exception as e:
-    from ensure_samplesheet import validate_sample_names_from_work_dir
+## Import functions needed for task execution
+
+from ensure_samplesheet import validate_sample_names_from_work_dir, ensure_sample_sheet_exists_and_is_valid_csv
+from tar_run_folder import tar_work_run_folder
+from run_bcl2fastq import run_demultiplex_task
 
 AIRFLOW_ADMIN_URL = '{}{}/admin/airflow/graph?dag_id=sequencer_automation'.format(os.environ.get('AIRFLOW_URL'),
                                                                                   os.environ.get('AIRFLOW_PORT'))
@@ -26,32 +26,14 @@ Example Conf Parameters:
         'work_dir': '/work/gencore/novaseq/180710_A00534_0022_AHFY3KDMXX'
         'scratch_dir': '/scratch/gencore/novaseq/180710_A00534_0022_AHFY3KDMXX'
         'bcl2fastq': '/scratch/gencore/bcl2fastq-v2.20.0.422/bin/bcl2fastq'
-
-copy_ssh_helpers_script_task
-    description: Copies the ssh_helpers.py script to the run folder (so there is always a current record in case it changes) 
-    host: dalma.abudhabi.nyu.edu
-    operator: SFTPOperator
-    dependencies: none 
     
 Demultiplex Tasks
 
-copy_ensure_samplesheet_task
-    description: Copies the ensure_samplesheet.py script to the run folder (so there is always a current record in case it changes) 
-    host: dalma.abudhabi.nyu.edu
-    operator: SFTPOperator
-    dependencies: copy_ssh_helpers_script_task 
-    
 ensure_samplesheet_task
-    description: Copies the run_bcl2fastq.py script to the run folder (so there is always a current record in case it changes) 
+    description: Runs bcl2fastq 
     host: dalma.abudhabi.nyu.edu
-    operator: SSHOperator
+    operator: PythonOperator
     dependencies: copy_ensure_samplesheet_task 
-
-copy_demultiplex_script_task
-    description: Copies the run_bcl2fastq.py script to the run folder (so there is always a current record in case it changes) 
-    host: dalma.abudhabi.nyu.edu
-    operator: SFTPOperator
-    dependencies: copy_ssh_helpers_script_task 
 
 demultiplex_task
     description: Runs the previously copied run_bcl2fastq script (from the run folder) and runs it. This uses bcl2fastq to demultiplex the run
@@ -59,38 +41,27 @@ demultiplex_task
         TODO Generate a report that indicates whether or not sample fails
     host: compute-15
     operator: SSHOperator
-    dependencies: copy_demultiplex_script_task
+    dependencies: ensure_samplesheet_task 
     
 rsync_work_task
     description: Rsyncs the demultiplexed reads from $WORK to $SCRATCH
     host: dalma.abudhabi.nyu.edu
-    operator: SSHOperator
+    operator: PythonOperator 
     dependencies: demultiplex_task
-    
-copy_tar_run_script_task
-    description: Copies the tar_run_folder.py script to the run folder
-    host: dalma.abudhabi.nyu.edu
-    operator: SFTP
-    dependencies: rsync_work_task
     
 tar_run_folder_task
     description: Tars the run folder and runs an md5sum check
     host: compute-15-1
     operator: SSHOperator
-    dependencies: copy_tar_run_script_task
+    dependencies: rsync_work_task 
 
-copy_archive_run_script_task
-    description: Copies the archive_run_folder to the run dir
-    host: dalma.abudhabi.nyu.edu 
-    operator: SFTPOperator
-    dependencies: tar_run_folder_task
 
 archive_run_folder_task
     description: Archives the tarred run
     host: archive3 
-    operator: SSHOperator
+    operator: PythonOperator 
     TODO: Figure out md5sum checks - I can run the md5sum, but then how to run it from archive?
-    dependencies: copy_archive_run_script_task
+    dependencies: demultiplex_task 
 
 SSH Hook Info
 
@@ -137,7 +108,7 @@ def update_jira_ticket_start_progress(context):
      'prev_execution_date': None,
      'run_id': '2018-12-9-12:24:04--JIRA-NCS-167--WORK_DIR-181126_NB551229_0030_AHYFTFBGX5-AIRFLOW-TEST',
      'tables': None,
-     'task': <Task(SFTPOperator): sftp_put_ssh_helpers_script>,
+     'task': <Task(PythonOperator): sftp_put_ssh_helpers_script>,
      'task_instance': <TaskInstance: sequencer_automation.sftp_put_ssh_helpers_script 2018-12-09T09:24:04+00:00 [success]>,
      'task_instance_key_str': 'sequencer_automation__sftp_put_ssh_helpers_script__20181209',
      'test_mode': False,
@@ -225,44 +196,14 @@ dag = DAG('sequencer_automation', default_args=default_args, schedule_interval=N
 ssh_hook = SSHHook(ssh_conn_id='gencore@dalma.abudhabi.nyu.edu')
 ssh_hook.no_host_key_check = True
 
-copy_ssh_helpers_script_task = SFTPOperator(
-    task_id='sftp_put_ssh_helpers_script',
-    local_filepath=os.path.join(this_dir,
-                                'ssh_helpers.py'),
-    remote_filepath='{{ dag_run.conf["work_dir"] }}/ssh_helpers.py',
-    operation='put',
-    ssh_hook=ssh_hook,
-    dag=dag,
-    on_success_callback=update_jira_ticket_start_progress,
-    on_failure_callback=update_jira_ticket_failure,
-)
-
-copy_ensure_samplesheet_task = SFTPOperator(
-    task_id='sftp_put_ensure_samplesheet_script',
-    local_filepath=os.path.join(this_dir,
-                                'ensure_samplesheet.py'),
-    remote_filepath='{{ dag_run.conf["work_dir"] }}/ensure_samplesheet.py',
-    operation='put',
-    ssh_hook=ssh_hook,
-    dag=dag,
-    on_failure_callback=update_jira_ticket_failure,
-)
-ensure_samplesheet_command = """
-        module load gencore gencore_anaconda/3-4.0.0
-        export PATH=/scratch/gencore/bcl2fastq-v2.20.0.422/bin/:$PATH
-        cd "{{ dag_run.conf["work_dir"] }}"
-        python3 ensure_samplesheet.py --run-dir {{ dag_run.conf["work_dir"] }}
-"""
-
-ensure_samplesheet_task = SSHOperator(
+ensure_samplesheet_exists_task = PythonOperator(
     task_id='ensure_samplesheet',
-    command=ensure_samplesheet_command,
-    ssh_hook=ssh_hook,
     retries=1,
-    do_xcom_push=True,
     on_success_callback=update_jira_ticket_success,
     on_failure_callback=update_jira_ticket_failure,
-    dag=dag
+    dag=dag,
+    python_callable=ensure_sample_sheet_exists_and_is_valid_csv,
+    provide_context=True,
 )
 
 validate_sample_names_task = PythonOperator(
@@ -274,38 +215,15 @@ validate_sample_names_task = PythonOperator(
     provide_context=True,
 )
 
-copy_demultiplex_script_task = SFTPOperator(
-    task_id='sftp_put_demultiplex_script',
-    local_filepath=os.path.join(this_dir,
-                                'run_bcl2fastq.py'),
-    remote_filepath='{{ dag_run.conf["work_dir"] }}/run_bcl2fastq.py',
-    operation='put',
-    ssh_hook=ssh_hook,
-    on_failure_callback=update_jira_ticket_failure,
-    dag=dag,
-)
-
-demultiplex_command = """
-        module load gencore gencore_anaconda/3-4.0.0
-        export PATH=/scratch/gencore/bcl2fastq-v2.20.0.422/bin/:$PATH
-        cd "{{ dag_run.conf["work_dir"] }}"
-        python3 run_bcl2fastq.py --run-dir {{ dag_run.conf["work_dir"] }}
-"""
-
-demultiplex_task = SSHOperator(
+demultiplex_task = PythonOperator(
     task_id='demultiplex',
-    command=demultiplex_command,
-    ssh_hook=ssh_hook,
     retries=1,
     on_success_callback=update_jira_ticket_success,
     on_failure_callback=update_jira_ticket_failure,
-    do_xcom_push=True,
+    python_callable=run_demultiplex_task,
+    provide_context=True,
     dag=dag
 )
-
-
-# Normally I would do this with the SFTP Operator
-# but I cannot figure out hwo to sftp a directory through the paramiko / airflow interface
 
 
 def update_jira_ticket_demultiplex_report_url(context):
@@ -319,6 +237,9 @@ def update_jira_ticket_demultiplex_report_url(context):
     jira_client.add_comment(jira_ticket, comment)
     return
 
+
+# Normally I would do this with the SFTP Operator
+# but I cannot figure out hwo to rsync a directory through the paramiko / airflow interface
 
 rsync_demultiplex_reports_dirs_command = """
     mkdir -p /home/airflow/html/{{ dag_run.conf["work_dir"].replace("/work/gencore", "") }}/Unaligned
@@ -346,51 +267,20 @@ rsync_work_task = SSHOperator(
     command=rsync_work_command,
     retries=5,
     retry_delay=10,
-    do_xcom_push=True,
+    # do_xcom_push=True,
     on_success_callback=update_jira_ticket_success,
     on_failure_callback=update_jira_ticket_failure,
     dag=dag
 )
 
-copy_tar_run_script_task = SFTPOperator(
-    task_id='sftp_put_tar_run_script',
-    local_filepath=os.path.join(this_dir,
-                                'tar_run_folder.py'),
-    remote_filepath='{{ dag_run.conf["work_dir"] }}/tar_run_folder.py',
-    operation='put',
-    ssh_hook=ssh_hook,
-    on_failure_callback=update_jira_ticket_failure,
-    dag=dag,
-)
-
-tar_run_folder_command = """
-        echo "{{ ds }}"
-        module load gencore gencore_anaconda/3-4.0.0
-        export PATH=/scratch/gencore/bcl2fastq-v2.20.0.422/bin/:$PATH
-        cd "{{ dag_run.conf["work_dir"] }}"
-        python3 tar_run_folder.py --run-dir {{ dag_run.conf["work_dir"] }}
-"""
-tar_run_folder_task = SSHOperator(
+tar_run_folder_task = PythonOperator(
     task_id='tar_run_folder_task',
-    ssh_hook=ssh_hook,
-    command=tar_run_folder_command,
     retries=5,
     retry_delay=10,
-    do_xcom_push=True,
     on_success_callback=update_jira_ticket_success,
     on_failure_callback=update_jira_ticket_failure,
-    dag=dag
-)
-
-copy_archive_run_script_task = SFTPOperator(
-    task_id='sftp_put_archive_run_script',
-    local_filepath=os.path.join(this_dir,
-                                'archive_run_folder.py'),
-    remote_filepath='{{ dag_run.conf["work_dir"] }}/archive_run_folder.py',
-    operation='put',
-    ssh_hook=ssh_hook,
-    on_failure_callback=update_jira_ticket_failure,
     dag=dag,
+    python_callable=tar_work_run_folder,
 )
 
 archive_run_folder_command = """
@@ -405,20 +295,15 @@ archive_run_folder_task = SSHOperator(
     command=archive_run_folder_command,
     retries=5,
     retry_delay=100,
-    do_xcom_push=True,
+    # do_xcom_push=True,
     on_success_callback=update_jira_ticket_success,
     on_failure_callback=update_jira_ticket_failure,
     dag=dag
 )
 
-copy_ensure_samplesheet_task.set_upstream(copy_ssh_helpers_script_task)
-ensure_samplesheet_task.set_upstream(copy_ensure_samplesheet_task)
-validate_sample_names_task.set_upstream(ensure_samplesheet_task)
-copy_demultiplex_script_task.set_upstream(validate_sample_names_task)
-demultiplex_task.set_upstream(copy_demultiplex_script_task)
+validate_sample_names_task.set_upstream(ensure_samplesheet_exists_task)
+demultiplex_task.set_upstream(validate_sample_names_task)
 rsync_demultiplex_reports_dirs.set_upstream(demultiplex_task)
 rsync_work_task.set_upstream(demultiplex_task)
-copy_tar_run_script_task.set_upstream(rsync_work_task)
-tar_run_folder_task.set_upstream(copy_tar_run_script_task)
-copy_archive_run_script_task.set_upstream(demultiplex_task)
-archive_run_folder_task.set_upstream(copy_archive_run_script_task)
+tar_run_folder_task.set_upstream(rsync_work_task)
+archive_run_folder_task.set_upstream(demultiplex_task)

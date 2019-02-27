@@ -4,13 +4,13 @@ channels:
   - defaults
 dependencies:
   - python=3.6
-  - airflow=1.10.0
-  - airflow-with-mysql
+  - airflow=1.10.1
   - flask-cors
+  - sshtunnel
   - jira
   - flower
   - celery
   - ipython
-  - mysqlclient
-  - mysql-connector-python
+  - airflow-with-postgres
+  - psycopg2
   - paramiko

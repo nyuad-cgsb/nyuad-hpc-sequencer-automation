@@ -1,6 +1,6 @@
 import {Component, OnInit} from '@angular/core';
 import {BiosailsWorkflowsModule} from '../biosails-workflows/biosails-workflows.module';
-import {get, padStart} from 'lodash';
+import {get, trimEnd, padStart} from 'lodash';
 import {AirflowService} from '../airflow/airflow.service';
 import {environment} from '../../environments/environment';
 
@@ -42,8 +42,8 @@ export class DemultiplexComponent implements OnInit {
     this.createRunId();
     this.airflowService.triggerDag('sequencer_automation', {
       conf: JSON.stringify({
-        work_dir: this.formResults.workDir,
-        scratch_dir: this.formResults.scratchDir,
+        work_dir: trimEnd(this.formResults.workDir, '/'),
+        scratch_dir: trimEnd(this.formResults.scratchDir, '/'),
         jira_ticket: this.formResults.jiraTicket,
       }),
       run_id: this.formResults.runId,
@@ -103,6 +103,7 @@ export class DemultiplexComponent implements OnInit {
     second = padStart(second, 2, '0');
 
     if (this.formResults.workDir) {
+      this.formResults.workDir = trimEnd(this.formResults.workDir, '/');
       runDir = this.formResults.workDir.split('/').pop();
       this.formResults.scratchDir = this.formResults.workDir.replace('/work', '/scratch');
     }
