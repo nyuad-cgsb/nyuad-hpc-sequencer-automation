@@ -1,9 +1,7 @@
 import unittest
 import tempfile
-import os
-import re
 
-from ensure_samplesheet import ensure_valid_sample_names, check_sample_name
+from demultiplex.ensure_samplesheet import ensure_valid_sample_names, check_sample_name
 
 sample_file = """Assay,TruSeq Nano DNA,,,,,,,,,
 Index Adapters,TruSeq DNA CD Indexes (96 Indexes),,,,,,,,,

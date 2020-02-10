@@ -1,7 +1,12 @@
-<pre class="card card-block card-header mb-3">Model: {{biosailsWorkflows.selectedWorkflow | json}}</pre>
-<label for="availableWorkflows">Available QC Workflows</label>
-<input name="availableWorkflows"
-       id="availableWorkflows"
-       [(ngModel)]="biosailsWorkflows.selectedWorkflow"
-       [typeahead]="biosailsWorkflows.availableWorkflows"
-       class="form-control">
+<div class="form-group">
+  <!--Begin List the QC Workflows-->
+  <div class="col-md-4">
+    <label for="availableQCWorkflows">Available QC Workflows</label>
+  </div>
+  <div class="col-md-8">
+    <select name="availableQCWorkflows"  id="availableQCWorkflows" class="form-control" [(ngModel)]="biosailsWorkflows.selectedQCWorkflow">
+      <option *ngFor="let qcWorkflow of biosailsWorkflows.availableQCWorkflows">{{qcWorkflow}}</option>
+    </select>
+  </div>
+  <!--End List the QC Workflows-->
+</div>

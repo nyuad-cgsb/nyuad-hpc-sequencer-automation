@@ -1,0 +1,186 @@
+{
+  "project": "ncs-233-qc",
+  "schedule": [
+    "concat_reads",
+    "raw_fastqc",
+    "trimmomatic",
+    "trimmomatic_fastqc",
+    "trimmomatic_gzip",
+    "multiqc",
+    "remove_trimmomatic_logs"
+  ],
+  "uuid": "C2B84670-ABEB-11E9-818B-87A6DB11D846",
+  "submissions": {
+    "ncs-233-qc_001_concat_reads": {
+      "job_task_index_start": 0,
+      "batch_index_end": "18",
+      "job_task_index_end": 17,
+      "batch_index_start": "1",
+      "jobname": "concat_reads"
+    },
+    "ncs-233-qc_003_trimmomatic": {
+      "batch_index_start": "1",
+      "jobname": "trimmomatic",
+      "batch_index_end": "9",
+      "job_task_index_start": 36,
+      "job_task_index_end": 44
+    },
+    "ncs-233-qc_007_remove_trimmomatic_logs": {
+      "jobname": "remove_trimmomatic_logs",
+      "batch_index_start": "1",
+      "job_task_index_end": 108,
+      "batch_index_end": "9",
+      "job_task_index_start": 100
+    },
+    "ncs-233-qc_005_trimmomatic_gzip": {
+      "batch_index_start": "1",
+      "jobname": "trimmomatic_gzip",
+      "job_task_index_end": 98,
+      "batch_index_end": "36",
+      "job_task_index_start": 63
+    },
+    "ncs-233-qc_006_multiqc": {
+      "batch_index_end": "1",
+      "job_task_index_start": 99,
+      "job_task_index_end": 99,
+      "batch_index_start": "1",
+      "jobname": "multiqc"
+    },
+    "ncs-233-qc_002_raw_fastqc": {
+      "job_task_index_start": 18,
+      "batch_index_end": "18",
+      "job_task_index_end": 35,
+      "jobname": "raw_fastqc",
+      "batch_index_start": "1"
+    },
+    "ncs-233-qc_004_trimmomatic_fastqc": {
+      "job_task_index_start": 45,
+      "batch_index_end": "18",
+      "job_task_index_end": 62,
+      "jobname": "trimmomatic_fastqc",
+      "batch_index_start": "1"
+    }
+  },
+  "submission_time": "2019-07-21T23:15:02",
+  "jobs": [
+    {
+      "deps": "",
+      "job": "concat_reads",
+      "walltime": "02:00:00",
+      "cpus_per_task": "6",
+      "total_tasks": "18",
+      "cmd_end": 18,
+      "cmd_start": "0",
+      "mem": "55GB",
+      "schedule": [
+        {
+          "task_indices": "1-18",
+          "scheduler_id": "1316487",
+          "total_tasks": 18
+        }
+      ]
+    },
+    {
+      "cmd_start": "18",
+      "cmd_end": 36,
+      "mem": "60GB",
+      "schedule": [
+        {
+          "total_tasks": 18,
+          "scheduler_id": "1316498",
+          "task_indices": "1-18"
+        }
+      ],
+      "deps": "concat_reads",
+      "job": "raw_fastqc",
+      "walltime": "07:00:00",
+      "cpus_per_task": "12",
+      "total_tasks": "18"
+    },
+    {
+      "mem": "118GB",
+      "schedule": [
+        {
+          "total_tasks": 9,
+          "scheduler_id": "1316499",
+          "task_indices": "1-9"
+        }
+      ],
+      "cmd_start": "36",
+      "cmd_end": 45,
+      "walltime": "50:00:00",
+      "job": "trimmomatic",
+      "deps": "concat_reads",
+      "total_tasks": "9",
+      "cpus_per_task": "24"
+    },
+    {
+      "total_tasks": "18",
+      "cpus_per_task": "12",
+      "walltime": "07:00:00",
+      "deps": "trimmomatic",
+      "job": "trimmomatic_fastqc",
+      "mem": "60GB",
+      "schedule": [
+        {
+          "task_indices": "1-18",
+          "scheduler_id": "1316500",
+          "total_tasks": 18
+        }
+      ],
+      "cmd_start": "45",
+      "cmd_end": 63
+    },
+    {
+      "schedule": [
+        {
+          "task_indices": "1-36",
+          "scheduler_id": "1316501",
+          "total_tasks": 36
+        }
+      ],
+      "mem": "118GB",
+      "cmd_end": 99,
+      "cmd_start": "63",
+      "walltime": "8:00:00",
+      "deps": "trimmomatic_fastqc",
+      "job": "trimmomatic_gzip",
+      "cpus_per_task": "6",
+      "total_tasks": "36"
+    },
+    {
+      "cmd_start": "99",
+      "cmd_end": 100,
+      "schedule": [
+        {
+          "total_tasks": 1,
+          "task_indices": "1-1",
+          "scheduler_id": "1316502"
+        }
+      ],
+      "mem": "118GB",
+      "cpus_per_task": "6",
+      "total_tasks": "1",
+      "deps": "trimmomatic_fastqc, raw_fastqc",
+      "job": "multiqc",
+      "walltime": "24:00:00"
+    },
+    {
+      "cmd_start": "100",
+      "cmd_end": 109,
+      "schedule": [
+        {
+          "scheduler_id": "1316503",
+          "task_indices": "1-9",
+          "total_tasks": 9
+        }
+      ],
+      "mem": "10GB",
+      "cpus_per_task": "1",
+      "total_tasks": "9",
+      "job": "remove_trimmomatic_logs",
+      "deps": "trimmomatic",
+      "walltime": "04:00:00"
+    }
+  ]
+}

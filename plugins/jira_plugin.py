@@ -5,6 +5,7 @@ import json
 from airflow.www.app import csrf
 from nyuad_cgsb_jira_client.jira_client import jira_client
 from jira import JIRAError
+# from flask_restful import Api, Resource, url_for
 
 
 JIRABlueprint = Blueprint(
@@ -16,7 +17,7 @@ JIRABlueprint = Blueprint(
 @JIRABlueprint.route('/get_jira_ticket', methods=['POST'])
 @csrf.exempt
 def get_jira_ticket():
-    """Adds localhost:8080/jira"""
+    """Adds localhost:8080/jira/get_jira_ticket"""
     request_data = json.loads(request.data.decode('utf-8'))
     ticket_id = request_data.get('ticketId')
     results = {}
@@ -55,6 +56,13 @@ def create_jira():
         results['error'] = str(e)
 
     return jsonify(results)
+
+
+class JiraTicket():
+    def get(self, id):
+        pass
+    def post(self, id):
+        pass
 
 
 # Defining the plugin class

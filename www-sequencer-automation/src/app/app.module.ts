@@ -25,6 +25,7 @@ import {environment} from '../environments/environment';
 import {TypeaheadModule} from 'ngx-bootstrap/typeahead';
 import {UiSwitchModule} from 'ngx-ui-switch';
 import {NotFoundComponent} from './pages/not-found/not-found.component';
+import {NgxSpinnerModule} from 'ngx-spinner';
 
 
 /**
@@ -39,8 +40,6 @@ const appRoutes: Routes = [
 
 // @ts-ignore
 const airflowApiUrl = environment.airflowApiUrl;
-console.log(`AirflowUrl: ${airflowApiUrl}`);
-console.log(JSON.stringify(environment));
 
 @NgModule({
   declarations: [
@@ -61,7 +60,8 @@ console.log(JSON.stringify(environment));
       appRoutes,
       // {enableTracing: true} // <-- debugging purposes only
     ),
-    TypeaheadModule.forRoot()
+    TypeaheadModule.forRoot(),
+    NgxSpinnerModule
   ],
   providers: [],
   bootstrap: [AppComponent]

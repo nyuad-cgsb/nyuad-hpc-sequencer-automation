@@ -7,15 +7,14 @@ from airflow.operators.python_operator import PythonOperator
 import os
 from pprint import pprint
 from nyuad_cgsb_jira_client.jira_client import jira_client
+from submit_qc_workflow import submit_qc_workflow_to_slurm
 
-## Import functions needed for task execution
+from demultiplex.ensure_samplesheet import validate_sample_names_from_scratch_dir, \
+    ensure_sample_sheet_exists_and_is_valid_csv
+from demultiplex.run_bcl2fastq import run_demultiplex_task
+from archive_run_folder import archive_scratch_dir_folder
 
-from ensure_samplesheet import validate_sample_names_from_work_dir, ensure_sample_sheet_exists_and_is_valid_csv
-from tar_run_folder import tar_work_run_folder
-from run_bcl2fastq import run_demultiplex_task
-
-AIRFLOW_ADMIN_URL = '{}{}/admin/airflow/graph?dag_id=sequencer_automation'.format(os.environ.get('AIRFLOW_URL'),
-                                                                                  os.environ.get('AIRFLOW_PORT'))
+from config import AIRFLOW_ADMIN_URL
 
 """Sequence Automation Tasks
 
@@ -23,12 +22,17 @@ Description: This is a workflow that goes from demultiplexing runs on /work, rsy
     tars the raw run along with the demultiplexed fastqs, runs an md5sum check, and archives the whole lot of it 
     
 Example Conf Parameters:
-        'work_dir': '/work/gencore/novaseq/180710_A00534_0022_AHFY3KDMXX'
+        'work_dir': '/work/gencoreseq/novaseq/180710_A00534_0022_AHFY3KDMXX'
         'scratch_dir': '/scratch/gencore/novaseq/180710_A00534_0022_AHFY3KDMXX'
         'bcl2fastq': '/scratch/gencore/bcl2fastq-v2.20.0.422/bin/bcl2fastq'
     
 Demultiplex Tasks
 
+rsync_to_scratch_task
+    description: Rsync the entire work directory to scratch
+    host: dalma.abudhabi.nyu.edu
+    operator: PythonOperator
+    
 ensure_samplesheet_task
     description: Runs bcl2fastq 
     host: dalma.abudhabi.nyu.edu
@@ -56,12 +60,12 @@ tar_run_folder_task
     dependencies: rsync_work_task 
 
 
-archive_run_folder_task
+archive_scratch_folder_task
     description: Archives the tarred run
     host: archive3 
     operator: PythonOperator 
     TODO: Figure out md5sum checks - I can run the md5sum, but then how to run it from archive?
-    dependencies: demultiplex_task 
+    dependencies: qc_task 
 
 SSH Hook Info
 
@@ -78,7 +82,7 @@ this_dir = os.path.dirname(os.path.realpath(__file__))
 default_args = {
     'owner': 'airflow',
     'depends_on_past': False,
-    'start_date': datetime(2015, 6, 1),
+    'start_date': datetime(2019, 1, 1),
     'email': ['airflow@example.com'],
     'email_on_failure': False,
     'email_on_retry': False,
@@ -177,7 +181,9 @@ def ensure_valid_sample_names_from_sample_sheet(ds, **kwargs):
     :return:
     """
     work_dir = kwargs['dag_run'].conf['work_dir']
-    valid_sample_names, invalid_sample_names = validate_sample_names_from_work_dir(ssh_hook=ssh_hook, work_dir=work_dir)
+    sample_sheet = kwargs['dag_run'].conf['sample_sheet']
+    valid_sample_names, invalid_sample_names = validate_sample_names_from_scratch_dir(ssh_hook=ssh_hook,
+                                                                                      csv_file=sample_sheet)
     if len(valid_sample_names):
         print('Found Valid Sample Names:\n{}'.format('\n'.join(valid_sample_names)))
     else:
@@ -228,12 +234,16 @@ demultiplex_task = PythonOperator(
 
 def update_jira_ticket_demultiplex_report_url(context):
     work_dir = context['dag_run'].conf['work_dir']
-    url = work_dir.replace("/work/gencore/", "")
-    url = 'https://{}{}/{}/Unaligned/Reports/html/index.html'.format(os.environ.get('AIRFLOW_URL'),
-                                                                     os.environ.get('NGINX_PORT'), url,
-                                                                     'Unaligned/Reports/html/index.html')
+    assert ("gencore" in work_dir)
+    if "gencoreseq" in work_dir:
+        url = work_dir.replace("/work/gencoreseq/", "")
+    else:
+        url = work_dir.replace("/work/gencore/", "")
+    url = '{}{}/{}/Unaligned/Reports/html/index.html'.format(os.environ.get('AIRFLOW_URL'),
+                                                             os.environ.get('NGINX_PORT'), url,
+                                                             'Unaligned/Reports/html/index.html')
     jira_ticket = context['dag_run'].conf['jira_ticket']
-    comment = '*Demultiplex Reports*: {} [Reports | {}'.format(url)
+    comment = '*Demultiplex Reports*: [Reports | {}]'.format(url)
     jira_client.add_comment(jira_ticket, comment)
     return
 
@@ -242,9 +252,15 @@ def update_jira_ticket_demultiplex_report_url(context):
 # but I cannot figure out hwo to rsync a directory through the paramiko / airflow interface
 
 rsync_demultiplex_reports_dirs_command = """
+{% if "/work/gencore/" in dag_run.conf["work_dir"]  %}
     mkdir -p /home/airflow/html/{{ dag_run.conf["work_dir"].replace("/work/gencore", "") }}/Unaligned
     rsync -avz gencore@dalma.abudhabi.nyu.edu:{{ dag_run.conf["work_dir"] }}/Unaligned/Reports \
      /home/airflow/html/{{ dag_run.conf["work_dir"].replace("/work/gencore", "") }}/Unaligned/
+{% elif "/work/gencoreseq/" in dag_run.conf["work_dir"] %}
+    mkdir -p /home/airflow/html/{{ dag_run.conf["work_dir"].replace("/work/gencoreseq", "") }}/Unaligned
+    rsync -avz gencore@dalma.abudhabi.nyu.edu:{{ dag_run.conf["work_dir"] }}/Unaligned/Reports \
+     /home/airflow/html/{{ dag_run.conf["work_dir"].replace("/work/gencoreseq", "") }}/Unaligned/
+{% endif %}
 """
 rsync_demultiplex_reports_dirs = BashOperator(
     task_id='create_demultiplex_reports_dirs',
@@ -255,55 +271,48 @@ rsync_demultiplex_reports_dirs = BashOperator(
     on_failure_callback=update_jira_ticket_failure,
 )
 
-rsync_work_command = """
-        echo "{{ ds }}"
-        {{ dag_run.conf["work_dir"] if dag_run else "exit 256" }}
+# TODO Update this to a python operator
+rsync_work_to_scratch_command = """
         mkdir -p {{ dag_run.conf["scratch_dir"] }}
-        rsync -av "{{ dag_run.conf["work_dir"] }}/Unaligned" "{{ dag_run.conf["scratch_dir"] }}/"
+        rsync -av "{{ dag_run.conf["work_dir"] }}/" "{{ dag_run.conf["scratch_dir"] }}/"
 """
-rsync_work_task = SSHOperator(
-    task_id='rsync_work_scratch',
+rsync_work_to_scratch_task = SSHOperator(
+    task_id='rsync_work_to_scratch',
     ssh_hook=ssh_hook,
-    command=rsync_work_command,
+    command=rsync_work_to_scratch_command,
     retries=5,
     retry_delay=10,
-    # do_xcom_push=True,
     on_success_callback=update_jira_ticket_success,
     on_failure_callback=update_jira_ticket_failure,
     dag=dag
 )
 
-tar_run_folder_task = PythonOperator(
-    task_id='tar_run_folder_task',
-    retries=5,
-    retry_delay=10,
-    on_success_callback=update_jira_ticket_success,
-    on_failure_callback=update_jira_ticket_failure,
-    dag=dag,
-    python_callable=tar_work_run_folder,
-)
-
-archive_run_folder_command = """
-        echo "{{ ds }}"
-        module load gencore gencore_anaconda/3-4.0.0
-        cd "{{ dag_run.conf["work_dir"] }}"
-        python3 archive_run_folder.py --run-dir {{ dag_run.conf["work_dir"] }}
-"""
-archive_run_folder_task = SSHOperator(
-    task_id='archive_run_dir_task',
-    ssh_hook=ssh_hook,
-    command=archive_run_folder_command,
+archive_scratch_folder_task = PythonOperator(
+    task_id='archive_run_dir',
     retries=5,
     retry_delay=100,
-    # do_xcom_push=True,
     on_success_callback=update_jira_ticket_success,
     on_failure_callback=update_jira_ticket_failure,
+    python_callable=archive_scratch_dir_folder,
+    provide_context=True,
     dag=dag
 )
 
+submit_qc_workflow_task = PythonOperator(
+    dag=dag,
+    task_id='submit_qc_workflow',
+    retries=1,
+    retry_delay=100,
+    provide_context=True,
+    python_callable=submit_qc_workflow_to_slurm,
+    on_success_callback=update_jira_ticket_success,
+    on_failure_callback=update_jira_ticket_failure,
+)
+
+ensure_samplesheet_exists_task.set_upstream(rsync_work_to_scratch_task)
 validate_sample_names_task.set_upstream(ensure_samplesheet_exists_task)
 demultiplex_task.set_upstream(validate_sample_names_task)
 rsync_demultiplex_reports_dirs.set_upstream(demultiplex_task)
-rsync_work_task.set_upstream(demultiplex_task)
-tar_run_folder_task.set_upstream(rsync_work_task)
-archive_run_folder_task.set_upstream(demultiplex_task)
+# rsync_work_to_scratch_task.set_upstream(demultiplex_task)
+submit_qc_workflow_task.set_upstream(demultiplex_task)
+archive_scratch_folder_task.set_upstream(submit_qc_workflow_task)

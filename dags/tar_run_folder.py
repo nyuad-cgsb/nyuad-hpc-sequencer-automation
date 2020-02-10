@@ -1,12 +1,7 @@
 import paramiko
-import argparse
 import logging
 import os
-import sys
-try:
-    from .ssh_helpers import execute_ssh_command
-except:
-    from ssh_helpers import execute_ssh_command
+from ssh_helpers import execute_ssh_command
 
 """
 This script tars the run-dir and runs an md5checksum
@@ -50,7 +45,7 @@ def tar_work_run_folder(ds, **kwargs):
     ssh = paramiko.SSHClient()
 
     ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-    ssh.connect('compute-15-1', username='gencore')
+    ssh.connect('dalma.abudhabi.nyu.edu', username='gencore')
 
     command = generate_tar_command(work_dir)
     status = execute_ssh_command(ssh, command, logger, None)

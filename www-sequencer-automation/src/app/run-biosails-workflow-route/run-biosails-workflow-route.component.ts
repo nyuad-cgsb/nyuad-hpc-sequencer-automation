@@ -1,5 +1,6 @@
 import {Component, OnInit} from '@angular/core';
 import {BiosailsWorkflowsModule} from '../biosails-workflows/biosails-workflows.module';
+import {AirflowService} from '../airflow/airflow.service';
 
 @Component({
   // selector: 'app-run-biosails-workflow-route',
@@ -7,9 +8,10 @@ import {BiosailsWorkflowsModule} from '../biosails-workflows/biosails-workflows.
   styleUrls: ['./run-biosails-workflow-route.component.css']
 })
 export class RunBiosailsWorkflowRouteComponent implements OnInit {
-  biosailsWorkflows = new BiosailsWorkflowsModule();
+  biosailsWorkflows: BiosailsWorkflowsModule;
 
-  constructor() {
+  constructor(private airflowService: AirflowService) {
+    this.biosailsWorkflows = new BiosailsWorkflowsModule(airflowService);
   }
 
   ngOnInit() {

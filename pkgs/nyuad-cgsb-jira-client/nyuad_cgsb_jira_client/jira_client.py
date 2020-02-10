@@ -36,7 +36,7 @@ jira_client = JIRA(options={'server': JIRA_SERVER}, oauth={
 #     print(project.key)
 #
 # issue_dict = {
-#     'project': 'NCS',
+#     'project': 'NCB',
 #     'summary': 'New issue from jira-python',
 #     'description': 'THIS IS A TEST. IT IS ONLY A TEST. DO NOT BE ALARMED',
 #     'issuetype': {'name': 'Task'},
@@ -45,7 +45,7 @@ jira_client = JIRA(options={'server': JIRA_SERVER}, oauth={
 # # pprint(new_issue)
 #
 # try:
-#     issue = jira_client.issue(id='NCS-174')
+#     issue = jira_client.issue(id='NCB-464')
 #     summary = issue.fields.summary
 #     description = issue.fields.description
 #     pprint(issue)

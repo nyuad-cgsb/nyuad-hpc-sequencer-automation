@@ -12,6 +12,11 @@ from airflow.sensors.base_sensor_operator import BaseSensorOperator
 from airflow.executors.base_executor import BaseExecutor
 from airflow.www.app import csrf
 
+"""
+This does nothing but use flask to serve up a static html page
+The page itself is an angular app in the www-sequencer-automation dir
+"""
+
 
 # Will show up under airflow.hooks.test_plugin.PluginHook
 class PluginHook(BaseHook):
@@ -64,6 +69,7 @@ v = Demultiplex(category="Demultiplex", name="Demultiplex")
 
 bp = Blueprint(
     "demultiplex_plugin", __name__,
+    url_prefix='/api',
     template_folder='templates',
     static_folder='static',
     static_url_path='/static/test_plugin')
